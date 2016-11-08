@@ -32,15 +32,15 @@ type user = {
 type organization = {
   name: string;
   channel_names: string list;
-  users: user list;
-  admin: user
+  users: string list;
+  admin: string
 }
 
 (** 
  * Value of type all_data represents all data needed by all clients
  *)
 type all_data = {
-  users: user list;
+  users: string list;
   organization_names: string list
 }
 
