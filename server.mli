@@ -1,3 +1,5 @@
+open DataOperations
+
 val send_message_simple_api : Cohttp_Response -> string
 val send_message_poll_api : Cohttp_Response -> string
 val send_message_reminder_api : Cohttp_Response -> string
