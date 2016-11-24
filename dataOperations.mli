@@ -13,8 +13,6 @@ type message_body =
  *)
 type message = {
   user_id : string;
-  channel_id : string;
-  organization_id : string;
   timestamp : int;
   body : message_body;
 }
@@ -24,7 +22,6 @@ type message = {
  *)
 type channel = {
   name : string;
-  organization_name : string;
   messages : message list;
   users : string list;
   is_public : bool;
@@ -49,9 +46,7 @@ type organization = {
   admin : string;
 }
 
-(**
- * The representation type of the data store.
- *)
+(** The representation type of the data store. *)
 type t
 
 (** 
@@ -92,25 +87,17 @@ val add_user : t -> string -> string -> bool
 (** [remove_user t u] removes user [u] from t. His messages stay intact. *)
 val remove_user : t -> string -> bool
 
-(**
- * [change_user_pass t u p] changes user [u]'s password to [p].
- *)
+(** [change_user_pass t u p] changes user [u]'s password to [p]. *)
 val change_user_pass : t -> string -> string -> bool
 
-(**
- * [add_user_org t u o] adds organization [o] to user [u].
- *)
+(** [add_user_org t u o] adds organization [o] to user [u]. *)
 val add_user_org : t -> string -> string -> bool
 
-(**
- * [remove_user_org t u o] removes user [u] from organization [o].
- *)
+(** [remove_user_org t u o] removes user [u] from organization [o]. *)
 val remove_user_org : t -> string -> string -> bool
 
-(**
- * [add_message t m] adds message [m] to [t].
- *)
-val add_message : t -> message -> bool
+(** [add_message t m] adds message [m] to [t]. *)
+val add_message : t -> string -> string -> string -> int -> message_body -> bool
 
 (**
  * [vote_poll t o c p op] increments option [op] of poll with name [p] in
@@ -125,24 +112,20 @@ val vote_poll : t -> string -> string -> string -> string -> bool
  *)
 val add_channel : t -> string -> string -> string -> bool -> bool
 
-(**
- * [remove_channel t o c] removes channel [c] from organization [o].
- *)
+(** [remove_channel t o c] removes channel [c] from organization [o]. *)
 val remove_channel : t -> string -> string -> bool
 
 (** [join_channel t c u o] adds user [u] to channel [c] in organization [o]. *)
 val join_channel : t -> string -> string -> string -> bool
 
-(** [leave_channel t c u o] removes user [u] from channel [c] in organization [o]. *)
+(**
+ * [leave_channel t c u o] removes user [u] from channel [c] in organization [o]
+ *)
 val leave_channel : t -> string -> string -> string -> bool
 
-(**
- * [add_org t o a] adds organization [o] with admin [a].
- *)
+(** [add_org t o a] adds organization [o] with admin [a]. *)
 val add_org : t -> string -> string -> bool
 
-(**
- * [remove_org t o] removes organization [o].
- *)
+(** [remove_org t o] removes organization [o]. *)
 val remove_org : t -> string -> bool
 

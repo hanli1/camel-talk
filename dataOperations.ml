@@ -5,15 +5,12 @@ type message_body =
 
 type message = {
   user_id : string;
-  channel_id : string;
-  organization_id : string;
   timestamp : int;
   body : message_body;
 }
 
 type channel = {
   name : string;
-  organization_name : string;
   messages : message list;
   users : string list;
   is_public : bool;
@@ -33,7 +30,6 @@ type organization = {
 
 type channel_mutable = {
   name_mut : string;
-  organization_name_mut : string;
   messages_mut : message DynArray.t;
   mutable users_mut : string list;
   is_public_mut : bool;
@@ -58,12 +54,17 @@ type t = {
 (******************************************************************************)
 (*                            Helper Functions                                *)
 (******************************************************************************)
-let get_org (orgs : organization_mutable DynArray.t) (orgname : string) : organization_mutable =
+let get_org (orgs : organization_mutable DynArray.t)
+            (orgname : string) : organization_mutable =
   let oidx = DynArray.index_of (fun org -> org.name_mut = orgname) orgs in
   DynArray.get orgs oidx
 
-let get_chan (chans : channel_mutable DynArray.t) (channame : string) : channel_mutable =
-  let cidx = DynArray.index_of (fun (chan : channel_mutable) -> chan.name_mut = channame) chans in
+let get_chan (chans : channel_mutable DynArray.t)
+             (channame : string) : channel_mutable =
+  let cidx = DynArray.index_of
+    (fun (chan : channel_mutable) -> chan.name_mut = channame)
+    chans
+  in
   DynArray.get chans cidx
 
 (******************************************************************************)
@@ -94,8 +95,10 @@ let get_org_list data =
 let get_org_data data orgname =
   try (
     let org = get_org data.organizations orgname in
-    let org_channels = org.channels_mut |> DynArray.to_list 
-                                        |> List.map (fun (c : channel_mutable) -> c.name_mut)
+    let org_channels =
+      org.channels_mut 
+      |> DynArray.to_list 
+      |> List.map (fun (c : channel_mutable) -> c.name_mut)
     in
     Some {
       name=org.name_mut;
@@ -112,8 +115,8 @@ let get_channel_data data orgname channame =
     let messages = DynArray.to_list chan.messages_mut in
     Some {
       name=chan.name_mut;
-      organization_name=chan.organization_name_mut;
-      messages=messages; users=chan.users_mut;
+      messages=messages;
+      users=chan.users_mut;
       is_public=chan.is_public_mut
     }
   ) with Not_found -> None
@@ -164,12 +167,21 @@ let remove_user_org data uid orgname =
   )
   else false
 
-let add_message data msg =
+let add_message data oname cname uid time msg_body =
   try (
-    let org = get_org data.organizations msg.organization_id in
-    let chan = get_chan org.channels_mut msg.channel_id in
-    DynArray.add chan.messages_mut msg;
-    true
+    let org = get_org data.organizations oname in
+    if List.mem uid org.users_mut then
+      let chan = get_chan org.channels_mut cname in
+      let new_message = {
+        user_id=uid;
+        timestamp=time;
+        body=msg_body;
+      }
+      in
+      DynArray.add chan.messages_mut new_message;
+      true
+    else
+      false
   ) with Not_found -> false
 
 let vote_poll data oname cname pname op =
@@ -213,7 +225,6 @@ let add_channel data oname cname u pub =
   ) with Not_found -> (
     let new_channel = {
       name_mut=cname;
-      organization_name_mut=oname;
       messages_mut=DynArray.create ();
       users_mut=[u];
       is_public_mut=pub
@@ -226,7 +237,10 @@ let add_channel data oname cname u pub =
 let remove_channel data oname cname =
   try (
     let org = get_org data.organizations oname in
-    let cidx = DynArray.index_of (fun (c : channel_mutable) -> c.name_mut = cname) org.channels_mut in
+    let cidx = DynArray.index_of
+      (fun (c : channel_mutable) -> c.name_mut = cname)
+      org.channels_mut
+    in
     DynArray.delete org.channels_mut cidx;
     true
   ) with Not_found -> false
@@ -281,7 +295,10 @@ let add_org data orgname adname =
 
 let remove_org data orgname =
   try (
-    let oidx = DynArray.index_of (fun o -> o.name_mut = orgname) data.organizations in
+    let oidx = DynArray.index_of
+      (fun o -> o.name_mut = orgname)
+      data.organizations
+    in
     DynArray.delete data.organizations oidx;
     true
   ) with Not_found -> false
