@@ -5,7 +5,7 @@
  *)
 type response = {
   status: bool;
-  message: string;
+  message: string
 }
 
 (**
