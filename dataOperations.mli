@@ -54,12 +54,6 @@ type organization = {
  *)
 type t
 
-(**
- * Initializes an empty data store. If there is no existing data store, this
- * function must be called before load_data will work.
- *)
-val init_data : unit -> bool
-
 (** 
  * [load_data ()] extracts a data structure from the data store and returns
  * its representation type.
@@ -136,8 +130,11 @@ val add_channel : t -> string -> string -> string -> bool -> bool
  *)
 val remove_channel : t -> string -> string -> bool
 
-(** [join_channel c u o] adds user [u] to channel [c] in organization o. *)
-val join_channel : string -> string -> string -> bool
+(** [join_channel t c u o] adds user [u] to channel [c] in organization [o]. *)
+val join_channel : t -> string -> string -> string -> bool
+
+(** [leave_channel t c u o] removes user [u] from channel [c] in organization [o]. *)
+val leave_channel : t -> string -> string -> string -> bool
 
 (**
  * [add_org t o a] adds organization [o] with admin [a].
