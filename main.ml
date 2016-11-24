@@ -1,7 +1,7 @@
 include Yojson
 open Client
 
-type current_state =
+type state =
 {
   mutable current_org : string option;
   mutable current_channel : string option;
