@@ -8,5 +8,7 @@
 # 	ocamlbuild -clean
 # 	rm -f data.mli.orig engine.mli.orig test_data.mli.orig test_engine.mli.orig
 
-make parser:
+parser:
 	ocamlbuild -pkgs str parser.byte
+main:
+	ocamlbuild -pkgs oUnit,yojson,str,ANSITerminal main.byte && ./main.byte
