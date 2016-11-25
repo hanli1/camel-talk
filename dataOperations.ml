@@ -52,7 +52,7 @@ type t = {
   organizations : organization_mutable DynArray.t;
 }
 (******************************************************************************)
-(*                            Helper Functions                                *)
+(*                              Helper Functions                              *)
 (******************************************************************************)
 let get_org (orgs : organization_mutable DynArray.t)
             (orgname : string) : organization_mutable =
@@ -68,14 +68,183 @@ let get_chan (chans : channel_mutable DynArray.t)
   DynArray.get chans cidx
 
 (******************************************************************************)
-(*                                                                            *)
+(*                         Text Database Interaction                          *)
 (******************************************************************************)
 
+let init_data () : unit =
+  let open Sys in
+  let _ =
+    if file_exists "database" && is_directory "database" then
+      command "rm -rf database/"
+    else 0
+  in
+  let _ = command "mkdir database/" in
+  let _ = command "touch database/users.txt" in
+  ()
+
+let read_data () : t =
+  let open Unix in
+  let open Sys in
+
+  let users = DynArray.create () in
+  let organizations = DynArray.create () in
+
+  let line_to_fields (line : string) : string list =
+    let open Str in
+    split (regexp "[\t]+") line
+  in
+
+  let field_to_values (field : string) : string list =
+    let open Str in
+    split (regexp "[;]+") field
+  in
+
+  let ends_with (s1 : string) (s2 : string) : bool =
+    let s2len = String.length s2 in
+    (String.sub s1 (String.length s1 - s2len) s2len) = s2
+  in
+
+  let rec collect_users (darr : user_mutable DynArray.t)
+                        (fh : in_channel) : unit =
+    try (
+      let line = input_line fh in
+      let fields = line_to_fields line in
+      let new_user =
+        match fields with
+        | username::password::[] -> {
+          username_mut=username;
+          password_mut=password;
+        }
+        | _ -> failwith "badly formed line"
+      in
+      DynArray.add darr new_user;
+      collect_users darr fh
+    ) with End_of_file -> close_in fh
+  in
+
+  let add_channel fh channels =
+    let channel_info = line_to_fields (input_line fh) in
+    let (name, is_public, users) =
+      match channel_info with
+      | n::p::us::[] ->
+        (n, bool_of_string p, field_to_values us)
+      | _ -> failwith "badly formed channel info"
+    in
+    let done_iter = ref false in
+    let messages = DynArray.create () in
+    while not !done_iter do
+      try (
+        let new_fields = line_to_fields (input_line fh) in
+        let (uid, time, body) =
+          match new_fields with
+          | u::t::mtype::binfo ->
+            let b =
+              if mtype = "SimpleMessage" then (
+                match binfo with
+                | text::[] -> SimpleMessage text
+                | _ -> failwith "badly formed SimpleMessage"
+              ) else if mtype = "ReminderMessage" then (
+                match binfo with
+                | text::rtime::[] -> ReminderMessage (text, int_of_string rtime)
+                | _ -> failwith "badly formed ReminderMessage"
+              ) else if mtype = "PollMessage" then (
+                match binfo with
+                | text::optvotes::[] ->
+                  let optvotelist = field_to_values optvotes in
+                  let optvotepairs = List.map
+                    (fun ovl -> 
+                      let pipe = String.index ovl '|' in
+                      let opt = String.sub ovl 0 pipe in
+                      let num = String.sub ovl (pipe+1)
+                                               (String.length ovl - (pipe+1)) in
+                      (opt, int_of_string num)
+                    )
+                    optvotelist
+                  in
+                  PollMessage (text, optvotepairs)
+                | _ -> failwith "badly formed PollMessage"
+              ) else (
+                failwith "badly formed message type"
+              )
+            in
+            (u, int_of_string t, b)
+          | _ -> failwith "badly formed message"
+        in
+        DynArray.add messages {user_id=uid; timestamp=time; body=body}
+      ) with End_of_file -> (
+        done_iter := true; close_in fh
+      )
+    done;
+    DynArray.add channels {
+      name_mut=name;
+      is_public_mut=is_public;
+      users_mut=users;
+      messages_mut=messages;
+    }
+  in
+
+
+  let add_channels channels dirname =
+    let files = Array.to_list (readdir dirname) in
+    let chan_files = files
+      |> List.map (fun x -> dirname^x)
+      |> List.filter (fun x -> not (is_directory x)
+                               && String.length x > String.length "_channel.txt"
+                               && ends_with x "_channel.txt")
+    in
+    List.iter (fun fn -> add_channel (open_in fn) channels) chan_files
+  in
+
+
+  let add_org organizations prefix (dn : string) : unit =
+    let dirname = prefix^dn^"/" in
+    if ends_with dirname "_org/" && is_directory dirname then (
+      let org_info_fh = open_in (dirname ^ "org_info.txt") in
+      let org_info = line_to_fields (input_line org_info_fh) in
+      close_in org_info_fh;
+      let (name, admin, users) =
+        match org_info with
+        | n::a::us::[] ->
+          (n, a, field_to_values us)
+        | _ -> failwith "badly formed org_info.txt"
+      in
+      let channels = DynArray.create () in
+
+      add_channels channels dirname;
+
+      let new_org = {
+        name_mut=name;
+        admin_mut=admin;
+        users_mut=users;
+        channels_mut=channels;
+      }
+      in
+      DynArray.add organizations new_org
+    )
+    else ()
+  in
+
+  collect_users users (open_in "database/users.txt");
+
+  let dbfiles = readdir "database/" in
+  Array.iter (add_org organizations "database/") dbfiles;
+
+  {users=users; organizations=organizations}
+
 let load_data () =
-  failwith "Unimplemented"
+  try (
+    read_data ()
+  ) with exn -> (
+    init_data ();
+    read_data ()
+  )
 
 let backup_data data =
   failwith "Unimplemented"
+
+(******************************************************************************)
+(*                            Type t Manipulation                             *)
+(******************************************************************************)
 
 let get_user_list data =
   let ulist = DynArray.to_list data.users in
@@ -167,14 +336,14 @@ let remove_user_org data uid orgname =
   )
   else false
 
-let add_message data oname cname uid time msg_body =
+let add_message data oname cname uid msg_body =
   try (
     let org = get_org data.organizations oname in
     if List.mem uid org.users_mut then
       let chan = get_chan org.channels_mut cname in
       let new_message = {
         user_id=uid;
-        timestamp=time;
+        timestamp=int_of_float (Unix.time ());
         body=msg_body;
       }
       in
