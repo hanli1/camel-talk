@@ -1,3 +1,0 @@
-memeteam	true	;han;
-han	20	PollMessage	what is your favorite meme?	;meme1|1;meme2|2;meme3|3;
-han	30	SimpleMessage	foobar

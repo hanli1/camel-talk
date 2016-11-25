@@ -71,16 +71,18 @@ let get_chan (chans : channel_mutable DynArray.t)
 (*                         Text Database Interaction                          *)
 (******************************************************************************)
 
+let cmd (c : string) : unit =
+  let _ = Sys.command c in ()
+
 let init_data () : unit =
   let open Sys in
   let _ =
     if file_exists "database" && is_directory "database" then
-      command "rm -rf database/"
-    else 0
+      cmd "rm -rf database/"
+    else ()
   in
-  let _ = command "mkdir database/" in
-  let _ = command "touch database/users.txt" in
-  ()
+  cmd "mkdir database/";
+  cmd "touch database/users.txt"
 
 let read_data () : t =
   let open Unix in
@@ -240,7 +242,79 @@ let load_data () =
   )
 
 let backup_data data =
-  failwith "Unimplemented"
+  let open Unix in
+  let open Sys in
+  try (
+    let write_users users =
+      let users_fh = open_out "database/users.txt" in
+      DynArray.iter 
+        (fun u -> let username = u.username_mut in
+                  let password = u.password_mut in
+                  output_string users_fh (username^"\t"^password^"\n"))
+        users;
+      close_out users_fh
+    in
+
+    let line_of_message (msg : message) : string =
+      let common_data = msg.user_id ^ "\t" ^ (string_of_int msg.timestamp) in
+      let specific_data =
+        match msg.body with
+        | SimpleMessage text -> "SimpleMessage\t"^text
+        | ReminderMessage (text, time) ->
+          "ReminderMessage\t"^text^"\t"^(string_of_int time)
+        | PollMessage (text, optlist) ->
+          let optstringlist =
+            List.map (fun (o,v) -> o^"|"^(string_of_int v)) optlist
+          in
+          let optstring = (String.concat ";" optstringlist)^";" in
+          "PollMessage\t"^text^"\t"^optstring
+      in
+      common_data^"\t"^specific_data^"\n"
+    in
+
+    let write_channel (basedir : string) (chan : channel_mutable) : unit =
+      let chan_fname = basedir^chan.name_mut^"_channel.txt" in
+      cmd ("touch " ^ chan_fname);
+
+      let chan_info_string = (String.concat "\t" [
+        chan.name_mut;
+        string_of_bool chan.is_public_mut;
+        (String.concat ";" chan.users_mut)^";";
+      ]) ^ "\n"
+      in
+      let chan_fh = open_out chan_fname in
+      output_string chan_fh chan_info_string;
+
+      DynArray.iter
+        (fun m -> output_string chan_fh (line_of_message m))
+        chan.messages_mut;
+
+      close_out chan_fh
+    in
+
+    let write_org basedir org =
+      let org_dirname = basedir ^ org.name_mut ^ "_org/" in
+      cmd ("mkdir " ^ org_dirname);
+      cmd ("touch " ^ org_dirname ^ "org_info.txt");
+
+      let org_info_string = (String.concat "\t" [
+        org.name_mut;
+        org.admin_mut;
+        (String.concat ";" org.users_mut)^";";
+      ]) ^ "\n"
+      in
+      let org_info_fh = open_out (org_dirname ^ "org_info.txt") in
+      output_string org_info_fh org_info_string;
+      close_out org_info_fh;
+
+      DynArray.iter (write_channel org_dirname) org.channels_mut
+    in
+
+    init_data ();
+    write_users data.users;
+    DynArray.iter (write_org "database/") data.organizations;
+    true;
+  ) with exn -> false
 
 (******************************************************************************)
 (*                            Type t Manipulation                             *)

@@ -1,4 +1,0 @@
-edward	pass1
-josh	pass2
-han	pass3
-kevin	pass4

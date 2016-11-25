@@ -1,4 +1,0 @@
-edward_kevin	false	;edward;kevin;
-edward	100	SimpleMessage	sup
-kevin	200	SimpleMessage	hello world
-kevin	500	ReminderMessage	finish the project	501
