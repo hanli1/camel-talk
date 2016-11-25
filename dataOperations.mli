@@ -96,8 +96,11 @@ val add_user_org : t -> string -> string -> bool
 (** [remove_user_org t u o] removes user [u] from organization [o]. *)
 val remove_user_org : t -> string -> string -> bool
 
-(** [add_message t m] adds message [m] to [t]. *)
-val add_message : t -> string -> string -> string -> int -> message_body -> bool
+(**
+ * [add_message t org chan uid msg_body] adds message with attributes org, 
+ * cha, uid to [t].
+ *)
+val add_message : t -> string -> string -> string -> message_body -> bool
 
 (**
  * [vote_poll t o c p op] increments option [op] of poll with name [p] in
