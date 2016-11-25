@@ -1,4 +1,3 @@
-open Main
 
 let json_to_list json =
   let open Yojson.Basic.Util in
@@ -39,11 +38,11 @@ let get_member_list_of_string json member_name =
   let open Yojson.Basic.Util in
   List.map to_string (get_member json member_name to_list)
 
-let get_current_org state =
+(* let get_current_org state =
   match state.current_org with
   | None -> "Not part of organization"
   | Some i -> i
-
+ *)
 let rec render_channels_list_helper channels_lst=
   match channels_lst with
   | [] -> ()
@@ -51,8 +50,8 @@ let rec render_channels_list_helper channels_lst=
   ANSITerminal.(print_string [green] (" | " ^ h ^ " | "));
   render_channels_list_helper t
 
-let render_channels_list state resp_obj =
-  ANSITerminal.(print_string [blue] ("Current organization: " ^ get_current_org state));
+let render_channels_list curr_org resp_obj =
+  ANSITerminal.(print_string [blue] ("Current organization: " ^ curr_org));
   render_channels_list_helper (get_member_list_of_string resp_obj "team_channels");
   render_channels_list_helper (get_member_list_of_string resp_obj "private_channels")
 
@@ -102,6 +101,6 @@ let rec render_channel_messages_helper lst =
   | [] -> ()
   | h::t -> render_message h; render_channel_messages_helper t
 
-let rec render_channel_messages state resp_obj =
+let rec render_channel_messages resp_obj =
   render_channel_messages_helper (json_to_list resp_obj)
 
