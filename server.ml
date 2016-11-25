@@ -30,12 +30,16 @@ let print_helper s =
   ())
 
 (**
- * [starts_with] is true if the string [s] begins with the string [suffix]; 
+ * [starts_with] is true if the string [s] begins with the string [prefix]; 
  * false otherwise
  *)
 let starts_with s prefix =
-  let prefix_length = String.length prefix in 
-  (String.sub s 0 prefix_length) = prefix
+  let prefix_length = String.length prefix in
+  let s_length = String.length s in
+  if s_length >= prefix_length then 
+    (String.sub s 0 prefix_length) = prefix
+  else
+    false
 
 (**
  * [serialize_message] is a string that represents the serialization of the 
@@ -65,6 +69,17 @@ let serialize_message m =
   "{\"message\":\"" ^ message_json_string ^ "\"," ^ "\"message_type\":\"" ^ 
   message_type ^ "\"," ^ "\"user_id\":\"" ^ m.user_id ^ "\"," ^ 
   "\"time_stamp\":\"" ^ (string_of_int m.timestamp) ^ "\"}"
+
+(**
+ * [get_query_val] is the value of the corresponding key [key] in the query
+ * string of the HTTP request represented by the request_record [request]; 
+ * raises Failure if the value is not found
+ *)
+let get_query_val request key =
+  let uri = request.request_info |> Request.uri in
+  match (Uri.get_query_param uri key) with
+  | Some v -> v
+  | None -> raise (Failure "Value of key not found in the query string")
 
 let send_message_api request =
   let meth = request.request_info |> Request.meth |> Code.string_of_method in
@@ -99,17 +114,17 @@ let send_message_api request =
         in
         if (add_message all_data organization_id channel_id user_id 
         message_record) = true then
-          {status_code=200;response_body="{\"status\":\"success\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"success\",\"message\"" ^ 
           ":\"successfully added message\"}"}
         else
-          {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"Unable to add message with given parameters in request\"}"}
     with
       | _ -> 
-        {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Wrong format for the body of this request\"}"}
   else
-    {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
     ":\"Wrong HTTP method for this request\"}"}
 
 let register_user_api request =
@@ -120,18 +135,18 @@ let register_user_api request =
       let user_id = json_body |> member "user_id" |> to_string in
       let password = json_body |> member "password" |> to_string in
       if (add_user all_data user_id password) = true then
-        {status_code=200;response_body="{\"status\":\"success\",\"message\"" ^ 
+        {status_code=200; response_body="{\"status\":\"success\",\"message\"" ^ 
         ":\"successfully added new user\"}"}
       else
-        {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Unable to register new user due to invalid username/password " ^ 
         "or because username already exists.\"}"}    
     with
       | _ -> 
-        {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Wrong format for the body of this request\"}"}        
   else
-    {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
     ":\"Wrong HTTP method for this request\"}"}
 
 let login_user_api request =
@@ -144,20 +159,20 @@ let login_user_api request =
       match (get_user_data all_data user_id) with 
       | Some u ->
         if u.password = password then
-          {status_code=200;response_body="{\"status\":\"success\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"success\",\"message\"" ^ 
           ":\"successfully authenticated\"}"} 
         else
-          {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"Password is incorrect for this user\"}"} 
       | None ->
-        {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"User id does not exist.\"}"} 
     with
       | _ -> 
-        {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Wrong format for the body of this request\"}"}  
   else
-    {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
     ":\"Wrong HTTP method for this request\"}"}
 
 let create_organization_api request =
@@ -168,18 +183,18 @@ let create_organization_api request =
       let organization_id = json_body |> member "organization_id" |> to_string in
       let user_id = json_body |> member "user_id" |> to_string in 
       if (add_org all_data organization_id user_id = true) then
-        {status_code=200;response_body="{\"status\":\"success\",\"message\"" ^ 
+        {status_code=200; response_body="{\"status\":\"success\",\"message\"" ^ 
         ":\"Organization successfully created\"}"}         
       else
-        {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Unable to create organization because the name is invalid or " ^ 
         "an organization with that name already exists.\"}"}       
     with
       | _ -> 
-        {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Wrong format for the body of this request\"}"}  
   else
-    {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
     ":\"Wrong HTTP method for this request\"}"}
 
 let delete_organization_api request =
@@ -192,20 +207,20 @@ let delete_organization_api request =
       match (get_org_data all_data organization_id) with 
       | Some o ->
         if o.admin = user_id then
-          {status_code=200;response_body="{\"status\":\"success\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"success\",\"message\"" ^ 
           ":\"Organization successfully deleted\"}"} 
         else
-          {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"The user is not the admin of this organization\"}"} 
       | None ->
-        {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Organization does not exist\"}"} 
     with
       | _ -> 
-        {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Wrong format for the body of this request\"}"}  
   else
-    {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
     ":\"Wrong HTTP method for this request\"}"}
 
 let create_channel_api request =
@@ -225,30 +240,30 @@ let create_channel_api request =
           if ((join_channel all_data channel_id first_user organization_id) = 
           true) && ((join_channel all_data channel_id second_user 
           organization_id) = true) then
-            {status_code=200;response_body="{\"status\":\"success\"," ^ 
+            {status_code=200; response_body="{\"status\":\"success\"," ^ 
             "\"message\":\"Direct message channel between the two users " ^ 
             "successfully created\"}"}  
           else
-             {status_code=200;response_body="{\"status\":\"failure\"," ^ 
+             {status_code=200; response_body="{\"status\":\"failure\"," ^ 
              "\"message\":\"Direct message channel between the two users " ^ 
              "could not be created\"}"}           
         else
-          {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"Direct message channel between the two users already exists\"}"}  
       else
         if (add_channel all_data organization_id channel_id user_id true) = 
         true then
-          {status_code=200;response_body="{\"status\":\"success\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"success\",\"message\"" ^ 
           ":\"Channel in organization successfully created\"}"}  
         else
-          {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"Channel already exists\"}"}  
     with
       | _ -> 
-        {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Wrong format for the body of this request\"}"}  
   else
-    {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
     ":\"Wrong HTTP method for this request\"}"}
 
 let delete_channel_api request =
@@ -260,7 +275,7 @@ let delete_channel_api request =
       let user_id = json_body |> member "user_id" |> to_string in 
       let channel_id = json_body |> member "channel_id" |> to_string in
       if (starts_with channel_id "directmessage") then
-        {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Direct message channels cannot be deleted\"}"}  
       else
         (
@@ -269,33 +284,32 @@ let delete_channel_api request =
           if o.admin = user_id then
             if (remove_channel all_data organization_id channel_id) = true 
             then
-              {status_code=200;response_body="{\"status\":\"success\"," ^ 
+              {status_code=200; response_body="{\"status\":\"success\"," ^ 
               "\"message\":\"Channel in organization successfully created\"}"} 
             else
-              {status_code=200;response_body="{\"status\":\"failure\"," ^ 
+              {status_code=200; response_body="{\"status\":\"failure\"," ^ 
               "\"message\":\"Channel does not exist in this organization\"}"}             
           else
-            {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+            {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
             ":\"The user is not the admin of this organization\"}"} 
         | None ->
-          {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"Organization does not exist\"}"} 
         )
     with
       | _ -> 
-        {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Wrong format for the body of this request\"}"}  
   else
-    {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
     ":\"Wrong HTTP method for this request\"}"}
 
 let get_channels_api request =
   let meth = request.request_info |> Request.meth |> Code.string_of_method in
   if meth = "GET" then
     try
-      let json_body = Yojson.Basic.from_string request.request_body in
-      let organization_id = json_body |> member "organization_id" |> to_string in
-      let user_id = json_body |> member "user_id" |> to_string in 
+      let organization_id = get_query_val request "organization_id" in
+      let user_id = get_query_val request "user_id" in 
       match (get_org_data all_data organization_id) with 
       | Some o ->
         if (List.mem user_id o.users) = true then
@@ -308,42 +322,37 @@ let get_channels_api request =
               | None -> raise (Failure "Channel does not exist")
           ) o.channel_names 
           in
-          let private_channels = List.filter (
-            fun channel_name -> 
-              let channel_record = get_channel_data all_data organization_id 
-              channel_name in 
-              match channel_record with
-              | Some c -> if c.is_public = false then true else false 
-              | None -> raise (Failure "Channel does not exist")
-          ) o.channel_names 
-          in
-          {status_code=200;response_body="{\"status\":\"success\",\"team_" ^ 
-            "channels\":" ^ "[" ^(String.concat "," team_channels) ^ "], \"" ^ 
-            "private_channels\":" ^ "[" ^ (String.concat "," private_channels) 
-            ^ "]}"}
+          let private_channels = List.filter (fun channel_name -> not 
+          (List.mem channel_name team_channels)) o.channel_names in
+          let team_channels_serialized = "[" ^ (String.concat "," 
+          (List.map (fun c -> "\"" ^ c ^ "\"") team_channels)) ^ "]" in
+          let private_channels_serialized = "[" ^(String.concat "," 
+          (List.map (fun c -> "\"" ^ c ^ "\"") private_channels)) ^ "]" in
+          {status_code=200; response_body="{\"status\":\"success\",\"team_" ^ 
+          "channels\":" ^ team_channels_serialized ^ ", \"" ^ 
+          "private_channels\":" ^ private_channels_serialized ^ "}"}
         else
-          {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"User does not belong to this organization\"}"} 
       | None ->
-        {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Organization does not exist\"}"} 
     with
       | _ -> 
-        {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Wrong format for the body of this request\"}"}  
   else
-    {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
     ":\"Wrong HTTP method for this request\"}"}
 
 let get_messages_api request =
   let meth = request.request_info |> Request.meth |> Code.string_of_method in
   if meth = "GET" then
     try
-      let json_body = Yojson.Basic.from_string request.request_body in
-      let organization_id = json_body |> member "organization_id" |> to_string in
-      let user_id = json_body |> member "user_id" |> to_string in 
-      let channel_id = json_body |> member "channel_id" |> to_string in
-      let start_index = json_body |> member "start_index" |> to_int in 
+      let organization_id = get_query_val request "organization_id" in
+      let user_id = get_query_val request "user_id" in 
+      let channel_id = get_query_val request "channel_id" in
+      let start_index = int_of_string (get_query_val request "start_index") in 
       match (get_channel_data all_data organization_id channel_id) with
       | Some c ->
         if (List.mem user_id c.users) = true then
@@ -357,20 +366,20 @@ let get_messages_api request =
               ((serialize_message cur_message)::cur_message_list)
           in
           let messages_list = get_10_messages start_index (start_index + 9) [] in
-          {status_code=200;response_body="{\"status\":\"success\",\"messages\":" ^
+          {status_code=200; response_body="{\"status\":\"success\",\"messages\":" ^
           "[" ^ (String.concat "," messages_list) ^ "]}"}
         else
-          {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"User does not belong to this channel\"}"}         
       | None ->
-        {status_code=200;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Channel does not exist in this organization\"}"}  
     with
       | _ -> 
-        {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Wrong format for the body of this request\"}"}     
   else
-    {status_code=400;response_body="{\"status\":\"failure\",\"message\"" ^ 
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
     ":\"Wrong HTTP method for this request\"}"}
 
 (**
