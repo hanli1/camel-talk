@@ -1,4 +1,4 @@
-include Yojson.Safe
+open Yojson.Safe
 
 type response = {
   status: bool;

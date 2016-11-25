@@ -1,4 +1,8 @@
-open Main
+#require "yojson";;
+open Yojson.Safe;;
+
+#require "ANSITerminal"
+
 
 let json_to_list json =
   let open Yojson.Basic.Util in
@@ -39,25 +43,8 @@ let get_member_list_of_string json member_name =
   let open Yojson.Basic.Util in
   List.map to_string (get_member json member_name to_list)
 
-let get_current_org state =
-  match state.current_org with
-  | None -> "Not part of organization"
-  | Some i -> i
-
-let rec render_channels_list_helper channels_lst=
-  match channels_lst with
-  | [] -> ()
-  | h::t ->
-  ANSITerminal.(print_string [green] (" | " ^ h ^ " | "));
-  render_channels_list_helper t
-
-let render_channels_list state resp_obj =
-  ANSITerminal.(print_string [blue] ("Current organization: " ^ get_current_org state));
-  render_channels_list_helper (get_member_list_of_string resp_obj "team_channels");
-  render_channels_list_helper (get_member_list_of_string resp_obj "private_channels")
-
 let print_linebreak _ =
-  ANSITerminal.(print_string [] "\n___________________________________\n")
+  ANSITerminal.(print_string [] "___________________________________\n")
 
 let print_newline _ =
   ANSITerminal.(print_string [] "\n")
@@ -97,11 +84,5 @@ let render_message msg =
     print_linebreak ()
   end
 
-let rec render_channel_messages_helper lst =
-  match lst with
-  | [] -> ()
-  | h::t -> render_message h; render_channel_messages_helper t
-
-let rec render_channel_messages state resp_obj =
-  render_channel_messages_helper (json_to_list resp_obj)
+let msg = to_basic (from_string "{\"message\": {\"text\": \"hi\"}, \"message_type\": \"simple\", \"user_id\": \"han\", \"time_stamp\": \"123\"}");;
 
