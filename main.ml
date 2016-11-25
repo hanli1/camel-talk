@@ -1,11 +1,13 @@
 include Yojson
 open Client
+open Parser
 
 type current_state =
 {
   mutable current_org : string option;
   mutable current_channel : string option;
-  mutable current_user : string
+  mutable current_user : string;
+  mutable current_screen : Parser.screen
 }
 
 type command =
@@ -17,18 +19,70 @@ type command =
   | CPollMessage of string * string list
   | CIllegal
 
-type screen =
-  | Messages
-  | Channels
-  | Organizations
-
-let rec main () =
-(* 	let _ = print_string (string_of_int (fst (ANSITerminal.size ()))) in
-	let _ = print_string (string_of_int (snd (ANSITerminal.size ()))) in *)
-	let userinput = read_line () in ()(* in
-match text_to_message userinput with
+let rec main st =
+	let userinput = read_line () in
+match text_to_message userinput st.current_screen with (*doesn't perform repainting*)
 | CIllegal ->
-	print_endline "Illegal command"; *)
+	ANSITerminal.(print_string [Bold; blue] "Illegal command"); main st
+| CCreate s -> (
+  match st.current_screen with
+  | Organizations -> 
+      let resp = Client.create_organization st.current_user s in
+      if resp.status then main st else 
+      ANSITerminal.(print_string [Bold; blue] resp.message); main st
+  | Channels -> (
+    match st.current_org with
+    | None -> failwith "shouldn't happen"
+    | Some o -> 
+      let resp = Client.create_channel st.current_user s o in
+      if resp.status then main st else
+      ANSITerminal.(print_string [Bold; blue] resp.message); main st
+  )
+  | Messages -> failwith "shouldn't happen"
+)
+| CDelete s -> (
+  match st.current_screen with
+  | Organizations -> 
+      let resp = Client.delete_organization st.current_user s in
+      if resp.status then main st else 
+      ANSITerminal.(print_string [Bold; blue] resp.message); main st
+  | Channels -> (
+    match st.current_org with
+    | None -> failwith "shouldn't happen"
+    | Some o -> 
+      let resp = Client.delete_channel st.current_user s o in
+      if resp.status then main st else
+      ANSITerminal.(print_string [Bold; blue] resp.message); main st
+  )
+  | Messages -> failwith "shouldn't happen"
+)
+| CSwitch s -> (
+  match st.current_screen with
+  | Organizations ->
+      let resp = Client.get_channels st.current_user s in
+      main st
+  | Channels -> (
+    match st.current_org with
+    | None -> failwith "shouldn't happen"
+    | Some o -> let resp = Client.get_messages st.current_user s o in
+      main st
+  )
+  | Messages -> failwith "shouldn't happen"
+)
+| CSimpleMessage s -> (
+  match st.current_screen with
+  | Messages -> (
+    match st.current_org with
+    | None -> failwith "shouldn't happen"
+    | Some o -> (
+      match st.current_channel with
+      | None -> failwith "shouldn't happen"
+      | Some c -> send_message_simple st.current_user c o
+        (`Assoc [("Content", `String s)])
+    )
+  ) 
+  | _ -> failwith "shouldn't happen"
+) 
 
 and login () =
   ANSITerminal.(print_string [Bold; blue]
@@ -40,7 +94,13 @@ and login () =
   	"Password: ");
   let password = read_line () in
   if (login_user username password).status then
-	main ()
+	main
+  {
+    current_org = None;
+    current_channel = None;
+    current_user = username;
+    current_screen = Parser.Organizations
+  }
   else
     ANSITerminal.(print_string [Bold; blue]
   	"\nNot a valid username and password pair.\nWant to register? y/n ");
@@ -57,11 +117,17 @@ and register () =
   ANSITerminal.(print_string [Bold; green]
   	"Password: ");
   let password = read_line () in
-let clientpass = register_user username password in
+  let clientpass = register_user username password in
   if clientpass.status then
   let _ = ANSITerminal.(print_string [Bold; green]
   	"Success!") in
-    main ()
+  main
+  {
+     current_org = None;
+     current_channel = None;
+     current_user = username;
+     current_screen = Organizations
+  }
   else
   ANSITerminal.(print_string [Bold; blue]
   	"An error occured. Please register again.");
@@ -74,7 +140,7 @@ let () =
 ANSITerminal.resize 80 34;
 	print_string
 "                         MMMMMMM                     MMMMMMMMMMMMMM
-                      MMMMMMMMMMMM                MMMMMMMMMMMMMMMMMMM
+                      MMMMMMMMMMMM                MMMMMMMMMM MMMMMMMM
                     MMMMMMMMMMMMMMMM                MMMMMMMMMMMMMMMMM
                MMMMMMMMMMMMMMMMMMMMMM              MMMMMMMMMMMMM   MM
             MMMMMMMMMMMMMMMMMMMMMMMMMMM            MMMMMMMMMMM
