@@ -1,4 +1,4 @@
-include Yojson
+open Yojson
 open Client
 open Parser
 
@@ -17,72 +17,127 @@ type command =
   | CSimpleMessage of string
   | CReminderMessage of string * int
   | CPollMessage of string * string list
+  | CBack
   | CIllegal
 
 let rec main st =
 	let userinput = read_line () in
-match text_to_message userinput st.current_screen with (*doesn't perform repainting*)
-| CIllegal ->
-	ANSITerminal.(print_string [Bold; blue] "Illegal command"); main st
-| CCreate s -> (
-  match st.current_screen with
-  | Organizations -> 
-      let resp = Client.create_organization st.current_user s in
-      if resp.status then main st else 
-      ANSITerminal.(print_string [Bold; blue] resp.message); main st
-  | Channels -> (
-    match st.current_org with
-    | None -> failwith "shouldn't happen"
-    | Some o -> 
-      let resp = Client.create_channel st.current_user s o in
-      if resp.status then main st else
-      ANSITerminal.(print_string [Bold; blue] resp.message); main st
-  )
-  | Messages -> failwith "shouldn't happen"
-)
-| CDelete s -> (
-  match st.current_screen with
-  | Organizations -> 
-      let resp = Client.delete_organization st.current_user s in
-      if resp.status then main st else 
-      ANSITerminal.(print_string [Bold; blue] resp.message); main st
-  | Channels -> (
-    match st.current_org with
-    | None -> failwith "shouldn't happen"
-    | Some o -> 
-      let resp = Client.delete_channel st.current_user s o in
-      if resp.status then main st else
-      ANSITerminal.(print_string [Bold; blue] resp.message); main st
-  )
-  | Messages -> failwith "shouldn't happen"
-)
-| CSwitch s -> (
-  match st.current_screen with
-  | Organizations ->
-      let resp = Client.get_channels st.current_user s in
-      main st
-  | Channels -> (
-    match st.current_org with
-    | None -> failwith "shouldn't happen"
-    | Some o -> let resp = Client.get_messages st.current_user s o in
-      main st
-  )
-  | Messages -> failwith "shouldn't happen"
-)
-| CSimpleMessage s -> (
-  match st.current_screen with
-  | Messages -> (
-    match st.current_org with
-    | None -> failwith "shouldn't happen"
-    | Some o -> (
-      match st.current_channel with
+  match text_to_message userinput st.current_screen with (*doesn't perform repainting*)
+  | CIllegal ->
+  	ANSITerminal.(print_string [Bold; blue] "Illegal command"); main st
+  | CCreate s -> (
+    match st.current_screen with
+    | Organizations -> 
+        let resp = Client.create_organization st.current_user s in
+        if resp.status then main st else 
+        ANSITerminal.(print_string [Bold; blue] resp.message); main st
+    | Channels -> (
+      match st.current_org with
       | None -> failwith "shouldn't happen"
-      | Some c -> send_message_simple st.current_user c o
-        (`Assoc [("Content", `String s)])
+      | Some o -> 
+        let resp = Client.create_channel st.current_user s o in
+        if resp.status then main st else
+        ANSITerminal.(print_string [Bold; blue] resp.message); main st
     )
-  ) 
-  | _ -> failwith "shouldn't happen"
-) 
+    | Messages -> failwith "shouldn't happen"
+  )
+  | CDelete s -> (
+    match st.current_screen with
+    | Organizations -> 
+        let resp = Client.delete_organization st.current_user s in (
+        match resp.status with
+        | false -> ANSITerminal.(print_string [Bold; blue] resp.message); 
+          main st
+        | true -> if not (Some s = st.current_org) then 
+        main st
+        else st.current_org <- None; main st
+      )
+    | Channels -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> 
+        let resp = Client.delete_channel st.current_user s o in
+        (
+        match resp.status with
+        | false -> ANSITerminal.(print_string [Bold; blue] resp.message); 
+          main st
+        | true -> if not (Some s = st.current_channel) then 
+        main st
+        else st.current_channel <- None; main st
+      )
+    )
+    | Messages -> failwith "shouldn't happen"
+  )
+  | CSwitch s -> (
+    match st.current_screen with
+    | Organizations ->
+        let resp = Client.get_channels st.current_user s in
+        st.current_org <- Some s;
+        main st
+    | Channels -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> 
+        let resp = Client.get_messages st.current_user s o in
+        st.current_channel <- Some s;
+        main st
+    )
+    | Messages -> failwith "shouldn't happen"
+  )
+  | CSimpleMessage s -> (
+    match st.current_screen with
+    | Messages -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> (
+        match st.current_channel with
+        | None -> failwith "shouldn't happen"
+        | Some c -> send_message_simple st.current_user c o
+          (`Assoc [("Content", `String s)]); main st
+      )
+    ) 
+    | _ -> failwith "shouldn't happen"
+  )
+  | CReminderMessage (s, i) -> (
+    match st.current_screen with
+    | Messages -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> (
+        match st.current_channel with
+        | None -> failwith "shouldn't happen"
+        | Some c -> send_message_reminder st.current_user c o
+          (`Assoc [("Content", `String s);("Time", `Int i)]); main st
+      )
+    ) 
+    | _ -> failwith "shouldn't happen"
+  )
+  | CPollMessage (s, xs) -> (
+    match st.current_screen with
+    | Messages -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> (
+        match st.current_channel with
+        | None -> failwith "shouldn't happen"
+        | Some c -> send_message_poll st.current_user c o
+          (`Assoc [("Content", `String s);("Options", `List (
+            List.map (fun x -> `String x) xs))]); main st
+      )
+    ) 
+    | _ -> failwith "shouldn't happen"
+  )
+  | CBack -> (
+    match st.current_screen with
+    | Organizations -> 
+    ANSITerminal.(print_string [Bold; blue] 
+      "Can't go out of organization screen."); main st
+    | Channels ->
+    st.current_screen <- Organizations;
+    st.current_channel <- None; main st
+    | Messages ->
+    st.current_screen <- Channels; main st
+  )
 
 and login () =
   ANSITerminal.(print_string [Bold; blue]

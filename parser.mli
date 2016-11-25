@@ -25,6 +25,7 @@ type command =
   | CSimpleMessage of string
   | CReminderMessage of string * int
   | CPollMessage of string * string list
+  | CBack
   | CIllegal
 
 
