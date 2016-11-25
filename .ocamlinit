@@ -6,3 +6,4 @@ open Yojson.Safe;;
 
 let msg = to_basic (from_string "{\"message\": {\"text\": \"hi\"}, \"message_type\": \"simple\", \"user_id\": \"han\", \"time_stamp\": \"123\"}");;
 
+let reminder = to_basic (from_string "{\"message\": {\"reminder\": \"GO FINISH 3110\"}, \"message_type\": \"reminder\", \"user_id\": \"han\", \"time_stamp\": \"123\"}");;
