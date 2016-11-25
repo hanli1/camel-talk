@@ -59,12 +59,18 @@ let get_width _ =
   fst (ANSITerminal.size())
 let get_height _ =
   snd (ANSITerminal.size())
+let cursor_x _ =
+  fst (ANSITerminal.pos_cursor())
+let cursor_y _ =
+  snd (ANSITerminal.pos_cursor())
 
 let rec gen_line str count =
   if count = 0 then str
   else gen_line (str ^ "_") (count - 1)
 let print_linebreak _ =
-  ANSITerminal.(print_string [] ("\n"^ (gen_line "" (get_width ())) ^"\n"))
+  print_newline();
+  ANSITerminal.(print_string [] (gen_line "" (get_width ())));
+  print_newline()
 
 let print_newline _ =
   ANSITerminal.(print_string [] "\n")
@@ -72,17 +78,27 @@ let print_newline _ =
 let rec print_votes lst =
   match lst with
   | [] -> ()
+  | h::[] ->
+    let choice = get_member_string h "name" in
+    let count = get_member_int h "count" in
+    ANSITerminal.(print_string [] (choice ^ ": " ^ (string_of_int count)))
   | h::t ->
     let choice = get_member_string h "name" in
     let count = get_member_int h "count" in
-    ANSITerminal.(print_string [] (choice ^ ": " ^ (string_of_int count) ^ ", "));
+    ANSITerminal.(print_string [] (choice ^ ": " ^ (string_of_int count) ^ "\n"));
     print_votes t
+
+let set_and_print x y styles text =
+  (* ANSITerminal.save_cursor(); *)
+  ANSITerminal.set_cursor x y;
+  ANSITerminal.(print_string styles text)
+  (* ANSITerminal.restore_cursor() *)
 
 let print_meta_data name time =
   ANSITerminal.(print_string [green] name);
   let time_length = String.length time in
-  ANSITerminal.set_cursor (get_width() - time_length) (snd(ANSITerminal.pos_cursor()));
-  ANSITerminal.(print_string [green] time)
+  set_and_print (get_width() - time_length + 1) (cursor_y()) [] time
+
 
 let render_message msg =
   let open Yojson.Basic.Util in
