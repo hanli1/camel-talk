@@ -30,15 +30,6 @@ let print_helper s =
   ())
 
 (**
- * [ends_with] is true if the string [s] ends with the string [suffix]; false
- * otherwise
- *)
-let ends_with s suffix =
-  let s_length = String.length s in
-  let suffix_length = String.length suffix in 
-  (String.sub s (s_length - suffix_length) suffix_length) = suffix
-
-(**
  * [starts_with] is true if the string [s] begins with the string [suffix]; 
  * false otherwise
  *)
@@ -389,6 +380,7 @@ let get_messages_api request =
  *)
 let request_router _conn req body =
   let uri = req |> Request.uri |> Uri.to_string in
+  let uri_path = req |> Request.uri |> Uri.path in
   let meth = req |> Request.meth |> Code.string_of_method in
   let headers = req |> Request.headers |> Header.to_string in
   body |> Cohttp_lwt_body.to_string >>= (
@@ -397,23 +389,23 @@ let request_router _conn req body =
       print_helper ("Request Information" ^ "\n\nUri: " ^ uri ^ "\nMethod: " 
       ^ meth ^ "\nHeaders: \n" ^ headers ^ "Body: " ^ body ^ "\n");
       let response_result =
-        if ends_with uri "/send_message" then
+        if uri_path = "/send_message" then
           send_message_api {request_info=req; request_body=body}
-        else if ends_with uri "/register_user" then
+        else if uri_path = "/register_user" then
           register_user_api {request_info=req; request_body=body}
-        else if ends_with uri "/login_user" then
+        else if uri_path = "/login_user" then
           login_user_api {request_info=req; request_body=body}
-        else if ends_with uri "/create_organization" then
+        else if uri_path = "/create_organization" then
           create_organization_api {request_info=req; request_body=body}
-        else if ends_with uri "/delete_organization" then
+        else if uri_path = "/delete_organization" then
           delete_organization_api {request_info=req; request_body=body}
-        else if ends_with uri "/create_channel" then
+        else if uri_path = "/create_channel" then
           create_channel_api {request_info=req; request_body=body}
-        else if ends_with uri "/delete_channel" then
+        else if uri_path = "/delete_channel" then
           delete_channel_api {request_info=req; request_body=body}
-        else if ends_with uri "/get_channels" then
+        else if uri_path = "/get_channels" then
           get_channels_api {request_info=req; request_body=body}
-        else if ends_with uri "/get_messages" then
+        else if uri_path = "/get_messages" then
           get_messages_api {request_info=req; request_body=body}
         else
           {status_code=404; response_body=
