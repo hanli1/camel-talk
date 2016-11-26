@@ -393,7 +393,7 @@ let delete_channel_api request =
             if (remove_channel all_data organization_id channel_id) = true 
             then
               {status_code=200; response_body="{\"status\":\"success\"," ^ 
-              "\"message\":\"Channel in organization successfully created\"}"} 
+              "\"message\":\"Channel in organization successfully deleted\"}"} 
             else
               {status_code=200; response_body="{\"status\":\"failure\"," ^ 
               "\"message\":\"Channel does not exist in this organization\"}"}             
@@ -497,6 +497,37 @@ let get_messages_api request =
     {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
     ":\"Wrong HTTP method for this request\"}"}
 
+let get_user_organizations_api request =
+  let meth = request.request_info |> Request.meth |> Code.string_of_method in
+  if meth = "GET" then
+    try
+      let user_id = get_query_val request "user_id" in 
+      let organization_lst = get_org_list all_data in
+      let rec get_user_organizations_api_helper l =
+        match l with
+        | [] -> []
+        | h::t ->
+          (match (get_org_data all_data h) with 
+          | Some o ->
+            if List.mem user_id o.users then 
+              (o.name)::(get_user_organizations_api_helper t) 
+            else
+              get_user_organizations_api_helper t 
+          | None -> (get_user_organizations_api_helper t))        
+      in
+      let user_orgs_lst = get_user_organizations_api_helper organization_lst in
+      let user_orgs_lst_serialized = "[" ^ (String.concat "," (List.map (fun o 
+      -> "\"" ^ o ^ "\"") user_orgs_lst)) ^ "]" in
+      {status_code=200; response_body="{\"status\":\"success\"," ^ 
+      "\"organizations\":" ^ user_orgs_lst_serialized ^ "}"}
+    with
+      | _ -> 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
+        ":\"Wrong format for the body of this request\"}"}     
+  else
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
+    ":\"Wrong HTTP method for this request\"}"}
+
 (**
  * [request_router] parses and routes an HTTP request specified by its 
  * request information [req] and request body [body] to the proper REST 
@@ -536,6 +567,8 @@ let request_router _conn req body =
           get_channels_api {request_info=req; request_body=body}
         else if uri_path = "/get_messages" then
           get_messages_api {request_info=req; request_body=body}
+        else if uri_path = "/get_user_organizations" then
+          get_user_organizations_api {request_info=req; request_body=body}
         else
           {status_code=404; response_body=
           "{\"error\":\"Invalid URI in request\"}"}
