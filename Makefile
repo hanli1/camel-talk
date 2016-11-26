@@ -12,6 +12,8 @@ parser:
 	ocamlbuild -pkgs str parser.byte
 main:
 	ocamlbuild -pkgs oUnit,yojson,str,ANSITerminal main.byte && ./main.byte
+server:
+	ocamlbuild -pkgs yojson,cohttp.lwt,extlib,str,unix server.byte
 renderer:
 	ocamlbuild -pkgs oUnit,yojson,str,ANSITerminal renderer.byte
 dataOperations:
