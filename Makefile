@@ -16,3 +16,7 @@ server:
 	ocamlbuild -pkgs yojson,cohttp.lwt,extlib,str,unix server.byte
 renderer:
 	ocamlbuild -pkgs oUnit,yojson,str,ANSITerminal renderer.byte
+dataOperations:
+	ocamlbuild -pkgs extlib,str,unix dataOperations.byte
+test_data:
+	ocamlbuild -pkgs extlib,str,unix,oUnit test_dataOperations.byte && ./test_dataOperations.byte
