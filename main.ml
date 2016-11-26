@@ -1,11 +1,16 @@
 open Yojson
 open Client
+open Parser
+open Renderer
+open Lwt
 
 type current_state =
 {
   mutable current_org : string option;
   mutable current_channel : string option;
-  mutable current_user : string
+  mutable current_user : string;
+  mutable current_screen : Parser.screen;
+  mutable logged_out : bool
 }
 
 type command =
@@ -15,20 +20,138 @@ type command =
   | CSimpleMessage of string
   | CReminderMessage of string * int
   | CPollMessage of string * string list
-  | CIllegal
+  | CBack
+  | CIllegal (*CHelp, CLogout*)
 
-type screen =
-  | Messages
-  | Channels
-  | Organizations
-
-let rec main () =
-(* 	let _ = print_string (string_of_int (fst (ANSITerminal.size ()))) in
-	let _ = print_string (string_of_int (snd (ANSITerminal.size ()))) in *)
-	let userinput = read_line () in ()(* in
-match text_to_message userinput with
-| CIllegal ->
-	print_endline "Illegal command"; *)
+let rec main st =
+  Lwt_main.run (Lwt.pick [draw_update st]);
+	let userinput = read_line () in
+  match text_to_message userinput st.current_screen with (*doesn't perform repainting*)
+  | CIllegal ->
+  	ANSITerminal.(print_string [Bold; blue] "Illegal command"); main st
+  | CCreate s -> (
+    match st.current_screen with
+    | Organizations -> 
+        let resp = Client.create_organization st.current_user s in
+        if resp.status = "success" then main st else 
+        ANSITerminal.(print_string [Bold; blue] resp.message); main st
+    | Channels -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> 
+        let resp = Client.create_channel st.current_user s o in
+        if resp.status = "success" then main st else
+        ANSITerminal.(print_string [Bold; blue] resp.message); main st
+    )
+    | Messages -> failwith "shouldn't happen"
+  )
+  | CDelete s -> (
+    match st.current_screen with
+    | Organizations -> 
+        let resp = Client.delete_organization st.current_user s in (
+        match resp.status with
+        | "fail" -> ANSITerminal.(print_string [Bold; blue] resp.message); 
+          main st
+        | "success" -> if not (Some s = st.current_org) then 
+        main st
+        else st.current_org <- None; main st
+      )
+    | Channels -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> 
+        let resp = Client.delete_channel st.current_user s o in
+        (
+        match resp.status with
+        | "fail" -> ANSITerminal.(print_string [Bold; blue] resp.message); 
+          main st
+        | "success" -> if not (Some s = st.current_channel) then 
+        main st
+        else st.current_channel <- None; main st
+      )
+    )
+    | Messages -> failwith "shouldn't happen"
+  )
+  | CSwitch s -> (
+    match st.current_screen with
+    | Organizations -> (
+        let resp = Client.get_channels st.current_user s in
+        match (fst resp) with
+        | "fail" ->
+        ANSITerminal.(print_string [Bold; blue] "Not a valid switch"); main st
+        | "success" ->
+        st.current_org <- Some s;
+        main st
+      )
+    | Channels -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> (
+        let resp = Client.get_messages st.current_user s o 0 in (*int is the index, this is probably wrong?*)
+        match (fst resp) with 
+        | "fail" ->
+        ANSITerminal.(print_string [Bold; blue] "Not a valid switch"); main st
+        | "success" ->
+        st.current_channel <- Some s;
+        main st
+      )
+    )
+    | Messages -> failwith "shouldn't happen"
+  )
+  | CSimpleMessage s -> (
+    match st.current_screen with
+    | Messages -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> (
+        match st.current_channel with
+        | None -> failwith "shouldn't happen"
+        | Some c -> send_message_simple st.current_user c o
+          (`Assoc [("Content", `String s)]); main st
+      )
+    ) 
+    | _ -> failwith "shouldn't happen"
+  )
+  | CReminderMessage (s, i) -> (
+    match st.current_screen with
+    | Messages -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> (
+        match st.current_channel with
+        | None -> failwith "shouldn't happen"
+        | Some c -> send_message_reminder st.current_user c o
+          (`Assoc [("Content", `String s);("Time", `Int i)]); main st
+      )
+    ) 
+    | _ -> failwith "shouldn't happen"
+  )
+  | CPollMessage (s, xs) -> (
+    match st.current_screen with
+    | Messages -> (
+      match st.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> (
+        match st.current_channel with
+        | None -> failwith "shouldn't happen"
+        | Some c -> send_message_poll st.current_user c o
+          (`Assoc [("Content", `String s);("Options", `List (
+            List.map (fun x -> `String x) xs))]); main st
+      )
+    ) 
+    | _ -> failwith "shouldn't happen"
+  )
+  | CBack -> (
+    match st.current_screen with
+    | Organizations -> 
+    ANSITerminal.(print_string [Bold; blue] 
+      "Can't go out of organization screen."); main st
+    | Channels ->
+    st.current_screen <- Organizations;
+    st.current_channel <- None; main st
+    | Messages ->
+    st.current_screen <- Channels; main st
+  )
 
 and login () =
   ANSITerminal.(print_string [Bold; blue]
@@ -39,13 +162,20 @@ and login () =
   ANSITerminal.(print_string [Bold; green]
   	"Password: ");
   let password = read_line () in
-  if (login_user username password).status then
-	main ()
-  else
+(*   if (login_user username password).status = "success" then
+ *)	main
+  {
+    current_org = None;
+    current_channel = None;
+    current_user = username;
+    current_screen = Parser.Channels;
+    logged_out = false
+  }
+(*   else
     ANSITerminal.(print_string [Bold; blue]
   	"\nNot a valid username and password pair.\nWant to register? y/n ");
   ANSITerminal.(print_string [Blink] "> ");
-  if (read_line ()) = "y" then register () else login ()
+  if (read_line ()) = "y" then register () else login () *)
 
 
 and register () =
@@ -57,24 +187,59 @@ and register () =
   ANSITerminal.(print_string [Bold; green]
   	"Password: ");
   let password = read_line () in
-let clientpass = register_user username password in
-  if clientpass.status then
+  let clientpass = register_user username password in
+  if clientpass.status = "success" then
   let _ = ANSITerminal.(print_string [Bold; green]
   	"Success!") in
-    main ()
+  main
+  {
+     current_org = None;
+     current_channel = None;
+     current_user = username;
+     current_screen = Organizations;
+     logged_out = false;
+  }
   else
   ANSITerminal.(print_string [Bold; blue]
   	"An error occured. Please register again.");
     register ()
 
 
-and draw_update c = ()
+and draw_update c =
+  Lwt_unix.sleep 0.1 >>= (fun () -> 
+  match c.current_screen with
+  | Organizations -> Lwt.return ()
+  | Channels ->
+      if c.logged_out then Lwt.return ()
+      else
+    (
+      match c.current_org with
+      | None -> render_channels_list "" (*should be current orgs? use render_orgs?*)
+          (snd (get_channels c.current_user "None")); draw_update c 
+      | Some o -> render_channels_list "" (*should be current orgs? use render_orgs?*)
+          (snd (get_channels c.current_user o)); draw_update c
+    )
+  | Messages -> 
+      if c.logged_out then Lwt.return ()
+      else
+    (
+      match c.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> (
+        match c.current_channel with
+        | None -> failwith "shouldn't happen"
+        | Some ch -> render_channel_messages
+            (snd (get_messages c.current_user ch o 0)); (*what is start index?*)
+            draw_update c
+      )
+    )
+  )
 
 let () =
 ANSITerminal.resize 80 34;
 	print_string
 "                         MMMMMMM                     MMMMMMMMMMMMMM
-                      MMMMMMMMMMMM                MMMMMMMMMMMMMMMMMMM
+                      MMMMMMMMMMMM                MMMMMMMMMM MMMMMMMM
                     MMMMMMMMMMMMMMMM                MMMMMMMMMMMMMMMMM
                MMMMMMMMMMMMMMMMMMMMMM              MMMMMMMMMMMMM   MM
             MMMMMMMMMMMMMMMMMMMMMMMMMMM            MMMMMMMMMMM
