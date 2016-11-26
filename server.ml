@@ -81,6 +81,46 @@ let get_query_val request key =
   | Some v -> v
   | None -> raise (Failure "Value of key not found in the query string")
 
+(**
+ * [join_public_channels] adds the user with id [user_id] to the public 
+ * channels of [channel_name_lst] of organization with id [organization_id]
+ *)
+let rec join_public_channels user_id organization_id channel_name_lst =
+  match channel_name_lst with
+  | [] -> true
+  | h::t -> 
+    (match (get_channel_data all_data organization_id h) with
+    | Some c ->
+      if c.is_public = true then
+        if ((join_channel all_data h user_id organization_id) = true) then
+          join_public_channels user_id organization_id t
+        else
+          false
+      else
+        join_public_channels user_id organization_id t
+    | None -> false
+    )
+
+(**
+ * [add_users_to_channel] adds all users of the organization with id 
+ * [organization_id] to the channel of [channel_id] of the organization
+ *)
+let add_users_to_channel organization_id channel_id =
+  match (get_org_data all_data organization_id) with 
+  | Some o ->
+    let rec add_users_to_channel_helper user_lst =
+      match user_lst with
+      | [] -> true
+      | h::t ->
+        (if ((join_channel all_data channel_id h organization_id) = true) then
+          add_users_to_channel_helper t
+        else
+          false
+        )
+    in
+    add_users_to_channel_helper o.users
+  | None -> false
+
 let send_message_api request =
   let meth = request.request_info |> Request.meth |> Code.string_of_method in
   if meth = "POST" then
@@ -238,9 +278,11 @@ let invite_user_organization_api request =
       match (get_org_data all_data organization_id) with 
       | Some o ->
         if o.admin = requester_id then
-          if ((add_user_org all_data user_id organization_id) = true) then
-            {status_code=200; response_body="{\"status\":\"success\"," ^ 
-            "\"message\":\"User successfully added to the organization\"}"}
+          if ((add_user_org all_data user_id organization_id) = true) && 
+          ((join_public_channels user_id organization_id o.channel_names) = 
+          true) then
+              {status_code=200; response_body="{\"status\":\"success\"," ^ 
+              "\"message\":\"User successfully added to the organization\"}"}
           else
             {status_code=200; response_body="{\"status\":\"failure\"," ^ 
             "\"message\":\"User could not be added to the organization\"}"} 
@@ -317,8 +359,8 @@ let create_channel_api request =
           {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"Direct message channel between the two users already exists\"}"}  
       else
-        if (add_channel all_data organization_id channel_id user_id true) = 
-        true then
+        if ((add_channel all_data organization_id channel_id user_id true) = 
+        true) && ((add_users_to_channel organization_id channel_id) = true) then
           {status_code=200; response_body="{\"status\":\"success\",\"message\"" ^ 
           ":\"Channel in organization successfully created\"}"}  
         else
