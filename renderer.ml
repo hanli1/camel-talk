@@ -38,23 +38,6 @@ let get_member_list_of_string json member_name =
   let open Yojson.Basic.Util in
   List.map to_string (get_member json member_name to_list)
 
-(* let get_current_org state =
-  match state.current_org with
-  | None -> "Not part of organization"
-  | Some i -> i
- *)
-let rec render_channels_list_helper channels_lst=
-  match channels_lst with
-  | [] -> ()
-  | h::t ->
-  ANSITerminal.(print_string [green] (" | " ^ h ^ " | "));
-  render_channels_list_helper t
-
-let render_channels_list curr_org resp_obj =
-  ANSITerminal.(print_string [blue] ("Current organization: " ^ curr_org));
-  render_channels_list_helper (get_member_list_of_string resp_obj "team_channels");
-  render_channels_list_helper (get_member_list_of_string resp_obj "private_channels")
-
 let get_width _ =
   fst (ANSITerminal.size())
 let get_height _ =
@@ -64,16 +47,51 @@ let cursor_x _ =
 let cursor_y _ =
   snd (ANSITerminal.pos_cursor())
 
-let rec gen_line str count =
+let rec gen_line str_dup str count =
   if count = 0 then str
-  else gen_line (str ^ "_") (count - 1)
-let print_linebreak _ =
+  else gen_line str_dup (str ^ str_dup) (count - 1)
+
+let print_across_screen str_dup =
+  ANSITerminal.(print_string [] (gen_line str_dup "" (get_width ())));
+  print_newline() (* WTF WHY DOES THIS LINE FIX FORMATTING??!*)
+
+(* let print_linebreak _ =
   print_newline();
-  ANSITerminal.(print_string [] (gen_line "" (get_width ())));
-  print_newline()
+  print_across_screen "_";
+  print_newline() *)
 
 let print_newline _ =
   ANSITerminal.(print_string [] "\n")
+
+(* let get_current_org state =
+  match state.current_org with
+  | None -> "Not part of organization"
+  | Some i -> i
+ *)
+let rec render_channels_list_helper channels_lst=
+  match channels_lst with
+  | [] -> ()
+  | h::[] -> ANSITerminal.(print_string [green] (" | " ^ h ^ " | "));
+  | h::t ->
+  ANSITerminal.(print_string [green] (" | " ^ h));
+  render_channels_list_helper t
+
+let render_channels_list curr_org resp_obj =
+  ANSITerminal.(print_string [blue] ("Current organization: " ^ curr_org));
+  print_newline();
+  ANSITerminal.(print_string [green] ("Public Channels -> "));
+  render_channels_list_helper (get_member_list_of_string resp_obj "team_channels");
+  print_newline();
+  ANSITerminal.(print_string [green] ("Private Channels -> "));
+  render_channels_list_helper (get_member_list_of_string resp_obj "private_channels");
+  print_newline()
+
+let render_organizations_list resp_obj =
+  ANSITerminal.(print_string [blue] ("Organizations list: "));
+  print_newline();
+  render_channels_list_helper (get_member_list_of_string resp_obj "organizations");
+  print_newline()
+
 
 let rec print_votes lst =
   match lst with
@@ -91,13 +109,16 @@ let rec print_votes lst =
 let set_and_print x y styles text =
   (* ANSITerminal.save_cursor(); *)
   ANSITerminal.set_cursor x y;
-  ANSITerminal.(print_string styles text)
+  ANSITerminal.(print_string [green] text)
   (* ANSITerminal.restore_cursor() *)
 
 let print_meta_data name time =
-  ANSITerminal.(print_string [green] name);
+  let divider = "—" in
+  print_across_screen divider;
+  ANSITerminal.(print_string [green] ("| "^name));
   let time_length = String.length time in
-  set_and_print (get_width() - time_length + 1) (cursor_y()) [] time
+  set_and_print (get_width() - time_length - 1) (cursor_y()) [] (time ^ " |");
+  print_across_screen divider
 
 
 let render_message msg =
@@ -108,23 +129,20 @@ let render_message msg =
   let mess = msg |> member "message" in
   if msg_type = "simple" then begin
     print_meta_data user_id time_stamp;
-    print_newline();
     ANSITerminal.(print_string [] (get_member_string mess "text"));
-    print_linebreak ()
+    (* print_linebreak () *)
   end
   else if msg_type = "reminder" then begin
     print_meta_data user_id time_stamp;
-    print_newline();
     ANSITerminal.(print_string [] ("Reminder set for " ^ (get_member_string mess "reminder")));
-    print_linebreak ()
+    (* print_linebreak () *)
   end
   else begin
     print_meta_data user_id time_stamp;
-    print_newline();
     ANSITerminal.(print_string [] (get_member_string mess "pollname"));
     print_newline ();
     print_votes (get_member_list mess "choices");
-    print_linebreak ()
+    (* print_linebreak () *)
   end
 
 let rec render_channel_messages_helper lst =
@@ -132,6 +150,7 @@ let rec render_channel_messages_helper lst =
   | [] -> ()
   | h::t -> render_message h; render_channel_messages_helper t
 
-let rec render_channel_messages resp_obj =
+let render_channel_messages resp_obj =
   render_channel_messages_helper (json_to_list resp_obj)
+
 
