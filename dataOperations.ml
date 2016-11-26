@@ -484,7 +484,7 @@ let vote_poll data oname cname pname op =
     true
   ) with Not_found -> false
 
-let add_channel data oname cname u pub =
+let add_channel data oname cname pub =
   let org = get_org data.organizations oname in
   try (
     let _ = get_chan org.channels_mut cname in
@@ -493,7 +493,7 @@ let add_channel data oname cname u pub =
     let new_channel = {
       name_mut=cname;
       messages_mut=DynArray.create ();
-      users_mut=[u];
+      users_mut=[];
       is_public_mut=pub
     }
     in

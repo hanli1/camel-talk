@@ -53,8 +53,18 @@ let r10 = add_org d1 "org1" "userfoo" (* should fail *)
 let r11 = add_user_org d1 "user2" "org1"
 let r12 = add_user_org d1 "user3" "org1"
 let r13 = add_user_org d1 "user1" "org1" (* should fail *)
+
+(*
 let r14 = add_channel d1 "org1" "channel1" "user2" true
 let r15 = add_channel d1 "org1" "channel2" "user1" false
+*)
+
+let r14 = add_channel d1 "org1" "channel1" true
+let r15 = add_channel d1 "org1" "channel2" false
+
+let re1 = join_channel d1 "channel1" "user2" "org1"
+let re2 = join_channel d1 "channel2" "user1" "org1"
+
 let r16 = join_channel d1 "channel1" "user3" "org1"
 let r17 = join_channel d1 "channel2" "user3" "org1"
 
@@ -69,9 +79,20 @@ let r24 = add_org d1 "org2" "user4"
 let r25 = add_user_org d1 "user5" "org2"
 let r26 = add_user_org d1 "user3" "org2"
 let r27 = add_user_org d1 "user3110" "org2" (* should fail *)
+(*
 let r28 = add_channel d1 "org2" "channel3" "user5" true
 let r29 = add_channel d1 "org2" "channel4" "user4" true
 let r30 = add_channel d1 "org2" "channel5" "user4" true
+*)
+
+let r28 = add_channel d1 "org2" "channel3" true
+let r29 = add_channel d1 "org2" "channel4" true
+let r30 = add_channel d1 "org2" "channel5" true
+
+let re3 = join_channel d1 "channel3" "user5" "org2"
+let re4 = join_channel d1 "channel4" "user4" "org2"
+let re5 = join_channel d1 "channel5" "user4" "org2"
+
 let r31 = join_channel d1 "channel3" "user3" "org2"
 let r32 = join_channel d1 "channel4" "user5" "org2"
 let r33 = join_channel d1 "channel4" "user3" "org2"

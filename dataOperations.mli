@@ -119,11 +119,10 @@ val add_message : t -> string -> string -> string -> message_body -> bool
 val vote_poll : t -> string -> string -> string -> string -> bool
 
 (**
- * [add_channel t o c u pub] adds channel [c] to organization [o]. The creating
- * user is [u], and the [pub] is true if this channel is public, false
- * otherwise.
+ * [add_channel t o c pub] adds channel [c] to organization [o]. [pub] is true
+ * if this channel is public, false otherwise.
  *)
-val add_channel : t -> string -> string -> string -> bool -> bool
+val add_channel : t -> string -> string -> bool -> bool
 
 (** [remove_channel t o c] removes channel [c] from organization [o]. *)
 val remove_channel : t -> string -> string -> bool
