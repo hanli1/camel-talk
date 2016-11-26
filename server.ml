@@ -207,11 +207,77 @@ let delete_organization_api request =
       match (get_org_data all_data organization_id) with 
       | Some o ->
         if o.admin = user_id then
-          {status_code=200; response_body="{\"status\":\"success\",\"message\"" ^ 
-          ":\"Organization successfully deleted\"}"} 
+          if ((remove_org all_data organization_id) = true) then
+            {status_code=200; response_body="{\"status\":\"success\"," ^ 
+            "\"message\":\"Organization successfully deleted\"}"}
+          else
+            {status_code=200; response_body="{\"status\":\"failure\"," ^ 
+            "\"message\":\"Organization could not be deleted\"}"} 
         else
           {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"The user is not the admin of this organization\"}"} 
+      | None ->
+        {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
+        ":\"Organization does not exist\"}"} 
+    with
+      | _ -> 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
+        ":\"Wrong format for the body of this request\"}"}  
+  else
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
+    ":\"Wrong HTTP method for this request\"}"}
+
+let invite_user_organization_api request =
+  let meth = request.request_info |> Request.meth |> Code.string_of_method in
+  if meth = "POST" then
+    try
+      let json_body = Yojson.Basic.from_string request.request_body in
+      let organization_id = json_body |> member "organization_id" |> to_string in
+      let user_id = json_body |> member "user_id" |> to_string in 
+      let requester_id = json_body |> member "requester_id" |> to_string in 
+      match (get_org_data all_data organization_id) with 
+      | Some o ->
+        if o.admin = requester_id then
+          if ((add_user_org all_data user_id organization_id) = true) then
+            {status_code=200; response_body="{\"status\":\"success\"," ^ 
+            "\"message\":\"User successfully added to the organization\"}"}
+          else
+            {status_code=200; response_body="{\"status\":\"failure\"," ^ 
+            "\"message\":\"User could not be added to the organization\"}"} 
+        else
+          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
+          ":\"The requesting user is not the admin of this organization\"}"} 
+      | None ->
+        {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
+        ":\"Organization does not exist\"}"} 
+    with
+      | _ -> 
+        {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
+        ":\"Wrong format for the body of this request\"}"}  
+  else
+    {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^ 
+    ":\"Wrong HTTP method for this request\"}"}
+
+let remove_user_organization_api request =
+  let meth = request.request_info |> Request.meth |> Code.string_of_method in
+  if meth = "POST" then
+    try
+      let json_body = Yojson.Basic.from_string request.request_body in
+      let organization_id = json_body |> member "organization_id" |> to_string in
+      let user_id = json_body |> member "user_id" |> to_string in 
+      let requester_id = json_body |> member "requester_id" |> to_string in 
+      match (get_org_data all_data organization_id) with 
+      | Some o ->
+        if o.admin = requester_id then
+          if ((remove_user_org all_data user_id organization_id) = true) then
+            {status_code=200; response_body="{\"status\":\"success\"," ^ 
+            "\"message\":\"User successfully removed from the organization\"}"}
+          else
+            {status_code=200; response_body="{\"status\":\"failure\"," ^ 
+            "\"message\":\"User could not be removed from the organization\"}"} 
+        else
+          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
+          ":\"The requesting user is not the admin of this organization\"}"} 
       | None ->
         {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Organization does not exist\"}"} 
@@ -318,12 +384,19 @@ let get_channels_api request =
               let channel_record = get_channel_data all_data organization_id 
               channel_name in 
               match channel_record with
-              | Some c -> if c.is_public = true then true else false 
+              | Some c -> (c.is_public = true)
               | None -> raise (Failure "Channel does not exist")
           ) o.channel_names 
           in
-          let private_channels = List.filter (fun channel_name -> not 
-          (List.mem channel_name team_channels)) o.channel_names in
+          let private_channels =  List.filter (           
+            fun channel_name -> 
+              let channel_record = get_channel_data all_data organization_id 
+              channel_name in 
+              match channel_record with
+              | Some c -> (c.is_public = false) && (List.mem user_id c.users)
+              | None -> raise (Failure "Channel does not exist")
+          ) o.channel_names 
+          in
           let team_channels_serialized = "[" ^ (String.concat "," 
           (List.map (fun c -> "\"" ^ c ^ "\"") team_channels)) ^ "]" in
           let private_channels_serialized = "[" ^(String.concat "," 
@@ -409,6 +482,10 @@ let request_router _conn req body =
           create_organization_api {request_info=req; request_body=body}
         else if uri_path = "/delete_organization" then
           delete_organization_api {request_info=req; request_body=body}
+        else if uri_path = "/invite_user_organization" then
+          invite_user_organization_api {request_info=req; request_body=body}
+        else if uri_path = "/remove_user_organization" then
+          remove_user_organization_api {request_info=req; request_body=body}
         else if uri_path = "/create_channel" then
           create_channel_api {request_info=req; request_body=body}
         else if uri_path = "/delete_channel" then
