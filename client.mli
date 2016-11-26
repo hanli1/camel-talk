@@ -81,3 +81,5 @@ val get_channels : string -> string -> string * Yojson.Basic.json
  * responder, and time stamp, among other things
  *)
 val get_messages : string -> string -> string -> int -> string * Yojson.Basic.json
+
+val get_user_organizations : string -> string * Yojson.Basic.json

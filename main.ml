@@ -24,7 +24,6 @@ type command =
   | CIllegal (*CHelp, CLogout*)
 
 let rec main st =
-  Lwt_main.run (Lwt.pick [draw_update st]);
 	let userinput = read_line () in
   match text_to_message userinput st.current_screen with (*doesn't perform repainting*)
   | CIllegal ->
@@ -81,6 +80,7 @@ let rec main st =
         ANSITerminal.(print_string [Bold; blue] "Not a valid switch"); main st
         | "success" ->
         st.current_org <- Some s;
+        st.current_screen <- Channels;
         main st
       )
     | Channels -> (
@@ -93,6 +93,7 @@ let rec main st =
         ANSITerminal.(print_string [Bold; blue] "Not a valid switch"); main st
         | "success" ->
         st.current_channel <- Some s;
+        st.current_screen <- Messages;
         main st
       )
     )
@@ -168,7 +169,7 @@ and login () =
     current_org = None;
     current_channel = None;
     current_user = username;
-    current_screen = Parser.Channels;
+    current_screen = Organizations;
     logged_out = false
   }
 (*   else
@@ -190,15 +191,18 @@ and register () =
   let clientpass = register_user username password in
   if clientpass.status = "success" then
   let _ = ANSITerminal.(print_string [Bold; green]
-  	"Success!") in
-  main
-  {
+  	"Success!\n") in
+  let st =  {
      current_org = None;
      current_channel = None;
      current_user = username;
      current_screen = Organizations;
      logged_out = false;
-  }
+  } in
+  Lwt_main.run (Lwt.pick [draw_update st
+ ; 
+  return (main st)
+  ]);
   else
   ANSITerminal.(print_string [Bold; blue]
   	"An error occured. Please register again.");
@@ -206,17 +210,20 @@ and register () =
 
 
 and draw_update c =
-  Lwt_unix.sleep 0.1 >>= (fun () -> 
+  Lwt_unix.sleep 0.5 >>= (fun () -> 
   match c.current_screen with
-  | Organizations -> Lwt.return ()
+  | Organizations -> 
+      if c.logged_out then Lwt.return ()
+      else
+      (render_organizations_list
+      (snd (get_user_organizations c.current_user)); draw_update c)
   | Channels ->
       if c.logged_out then Lwt.return ()
       else
     (
       match c.current_org with
-      | None -> render_channels_list "" (*should be current orgs? use render_orgs?*)
-          (snd (get_channels c.current_user "None")); draw_update c 
-      | Some o -> render_channels_list "" (*should be current orgs? use render_orgs?*)
+      | None -> failwith "shouldn't happen"
+      | Some o -> render_channels_list o
           (snd (get_channels c.current_user o)); draw_update c
     )
   | Messages -> 
