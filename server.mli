@@ -1,60 +1,74 @@
-open DataOperations
+(**
+ * request_record is a type that represents the contents of an HTTP Request
+ * for an API call 
+ *)
+type request_record = {
+  request_info : Cohttp.Request.t;
+  request_body : string;
+}
 
 (**
- * processes the send simple message and updates the data store
+ * response_record is a type that represents the contents of an HTTP Response
+ * for an API call
  *)
-val send_message_simple_api : Cohttp_Request -> string
+type response_record = {
+  status_code : int;
+  response_body : string;
+}
 
 (**
- * processes the send poll message and updates the data store
+ * processes a user request to send a message
  *)
-val send_message_poll_api : Cohttp_Request -> string
+val send_message_api : request_record -> response_record
 
 (**
- * processes the send reminder message and updates the data store
+ * processes a user request to register a user on the server
  *)
-val send_message_reminder_api : Cohttp_Request -> string
+val register_user_api : request_record -> response_record
 
 (**
- * processes the register user request and updates the data store
+ * processes a user request to login to the application
  *)
-val register_user_api : Cohttp_Request -> string
+val login_user_api : request_record -> response_record
 
 (**
- * processes the login user request
+ * processes a user request to create an organization
  *)
-val login_user_api : Cohttp_Request -> string
+val create_organization_api : request_record -> response_record
 
 (**
- * processes the create new organization for a user and updates the data store
+ * processes a user request to delete an organization
  *)
-val create_organization_api : Cohttp_Request -> string
+val delete_organization_api : request_record -> response_record
 
 (**
- * processes the delete organization for a user and updates the data store
+ * processes a user request to invite a user to an organization
  *)
-val delete_organization_api : Cohttp_Request -> string
-
+val invite_user_organization_api : request_record -> response_record
 
 (**
- * processes the create new channel for a user and updates the data store
+ * processes a user request to remove a user from an organization
  *)
-val create_channel_api : Cohttp_Request -> string
+val remove_user_organization_api : request_record -> response_record
 
 (**
- * processes the delete channel for a user and updates the data store
+ * processes a user request to create a new channel in an orgnanization
  *)
-val delete_channel_api : Cohttp_Request -> string
-
-
-(**
- * processes the get channels request and gives the user all channels associated
- * with an organization
- *)
-val get_channels_api : Cohttp_Request -> string
+val create_channel_api : request_record -> response_record
 
 (**
- * processes the get messages request and gives the user all messages associated
- * with a channel inside an organization]
+ * processes a user request to delete a channel of an organization
  *)
-val get_messages_api : Cohttp_Request -> string
+val delete_channel_api : request_record -> response_record
+
+(**
+ * processes a user request to get all public channels associated
+ * with an organization and also the user's private channels
+ *)
+val get_channels_api : request_record -> response_record
+
+(**
+ * processes a user request to get up to 10 messages of a channel of an
+ * organization
+ *)
+val get_messages_api : request_record -> response_record
