@@ -1,4 +1,4 @@
-include Yojson
+open Yojson
 open Client
 
 type current_state =
