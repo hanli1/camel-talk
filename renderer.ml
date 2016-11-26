@@ -90,7 +90,8 @@ let render_organizations_list resp_obj =
   ANSITerminal.(print_string [blue] ("Organizations list: "));
   print_newline();
   render_channels_list_helper (get_member_list_of_string resp_obj "organizations");
-  print_newline()
+  print_newline();
+  flush_all ()
 
 
 let rec print_votes lst =

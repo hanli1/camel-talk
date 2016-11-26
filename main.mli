@@ -35,4 +35,4 @@ val register : unit -> unit
 (*
  * Contains the REPL
  *)
-val main : current_state -> unit
+val main : current_state -> unit Lwt.t
