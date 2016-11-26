@@ -2,6 +2,7 @@ open Yojson.Basic
 open Lwt
 open Cohttp
 open Cohttp_lwt_unix
+open Yojson.Safe
 
 type response = {
   status: string;

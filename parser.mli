@@ -28,7 +28,6 @@ type command =
   | CBack
   | CIllegal
 
-
 type screen =
   | Messages
   | Channels

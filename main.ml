@@ -1,13 +1,16 @@
 open Yojson
 open Client
 open Parser
+open Renderer
+open Lwt
 
 type current_state =
 {
   mutable current_org : string option;
   mutable current_channel : string option;
   mutable current_user : string;
-  mutable current_screen : Parser.screen
+  mutable current_screen : Parser.screen;
+  mutable logged_out : bool
 }
 
 type command =
@@ -18,9 +21,10 @@ type command =
   | CReminderMessage of string * int
   | CPollMessage of string * string list
   | CBack
-  | CIllegal
+  | CIllegal (*CHelp, CLogout*)
 
 let rec main st =
+  Lwt_main.run (Lwt.pick [draw_update st]);
 	let userinput = read_line () in
   match text_to_message userinput st.current_screen with (*doesn't perform repainting*)
   | CIllegal ->
@@ -158,19 +162,20 @@ and login () =
   ANSITerminal.(print_string [Bold; green]
   	"Password: ");
   let password = read_line () in
-  if (login_user username password).status = "success" then
-	main
+(*   if (login_user username password).status = "success" then
+ *)	main
   {
     current_org = None;
     current_channel = None;
     current_user = username;
-    current_screen = Parser.Organizations
+    current_screen = Parser.Channels;
+    logged_out = false
   }
-  else
+(*   else
     ANSITerminal.(print_string [Bold; blue]
   	"\nNot a valid username and password pair.\nWant to register? y/n ");
   ANSITerminal.(print_string [Blink] "> ");
-  if (read_line ()) = "y" then register () else login ()
+  if (read_line ()) = "y" then register () else login () *)
 
 
 and register () =
@@ -191,7 +196,8 @@ and register () =
      current_org = None;
      current_channel = None;
      current_user = username;
-     current_screen = Organizations
+     current_screen = Organizations;
+     logged_out = false;
   }
   else
   ANSITerminal.(print_string [Bold; blue]
@@ -199,7 +205,35 @@ and register () =
     register ()
 
 
-and draw_update c = ()
+and draw_update c =
+  Lwt_unix.sleep 0.1 >>= (fun () -> 
+  match c.current_screen with
+  | Organizations -> Lwt.return ()
+  | Channels ->
+      if c.logged_out then Lwt.return ()
+      else
+    (
+      match c.current_org with
+      | None -> render_channels_list "" (*should be current orgs? use render_orgs?*)
+          (snd (get_channels c.current_user "None")); draw_update c 
+      | Some o -> render_channels_list "" (*should be current orgs? use render_orgs?*)
+          (snd (get_channels c.current_user o)); draw_update c
+    )
+  | Messages -> 
+      if c.logged_out then Lwt.return ()
+      else
+    (
+      match c.current_org with
+      | None -> failwith "shouldn't happen"
+      | Some o -> (
+        match c.current_channel with
+        | None -> failwith "shouldn't happen"
+        | Some ch -> render_channel_messages
+            (snd (get_messages c.current_user ch o 0)); (*what is start index?*)
+            draw_update c
+      )
+    )
+  )
 
 let () =
 ANSITerminal.resize 80 34;
