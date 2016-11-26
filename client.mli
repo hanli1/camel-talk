@@ -4,7 +4,7 @@
  * “can’t create channel that already exists”
  *)
 type response = {
-  status: bool;
+  status: string;
   message: string
 }
 
@@ -73,11 +73,11 @@ val delete_channel : string -> string -> string -> response
  * Takes in user id and organization name and returns a json object containing
  * an array of team channels and private channels
  *)
-val get_channels : string -> string -> Yojson.Basic.json
+val get_channels : string -> string -> string * Yojson.Basic.json
 
 (**
  * Takes in user id, organization name, channel name, start index, and
  * returns a json object containing the message, message type, user_id of the
  * responder, and time stamp, among other things
  *)
-val get_messages : string -> string -> string -> int -> Yojson.Basic.json
+val get_messages : string -> string -> string -> int -> string * Yojson.Basic.json

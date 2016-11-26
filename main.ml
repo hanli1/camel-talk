@@ -29,14 +29,14 @@ let rec main st =
     match st.current_screen with
     | Organizations -> 
         let resp = Client.create_organization st.current_user s in
-        if resp.status then main st else 
+        if resp.status = "success" then main st else 
         ANSITerminal.(print_string [Bold; blue] resp.message); main st
     | Channels -> (
       match st.current_org with
       | None -> failwith "shouldn't happen"
       | Some o -> 
         let resp = Client.create_channel st.current_user s o in
-        if resp.status then main st else
+        if resp.status = "success" then main st else
         ANSITerminal.(print_string [Bold; blue] resp.message); main st
     )
     | Messages -> failwith "shouldn't happen"
@@ -46,9 +46,9 @@ let rec main st =
     | Organizations -> 
         let resp = Client.delete_organization st.current_user s in (
         match resp.status with
-        | false -> ANSITerminal.(print_string [Bold; blue] resp.message); 
+        | "fail" -> ANSITerminal.(print_string [Bold; blue] resp.message); 
           main st
-        | true -> if not (Some s = st.current_org) then 
+        | "success" -> if not (Some s = st.current_org) then 
         main st
         else st.current_org <- None; main st
       )
@@ -59,9 +59,9 @@ let rec main st =
         let resp = Client.delete_channel st.current_user s o in
         (
         match resp.status with
-        | false -> ANSITerminal.(print_string [Bold; blue] resp.message); 
+        | "fail" -> ANSITerminal.(print_string [Bold; blue] resp.message); 
           main st
-        | true -> if not (Some s = st.current_channel) then 
+        | "success" -> if not (Some s = st.current_channel) then 
         main st
         else st.current_channel <- None; main st
       )
@@ -70,17 +70,27 @@ let rec main st =
   )
   | CSwitch s -> (
     match st.current_screen with
-    | Organizations ->
+    | Organizations -> (
         let resp = Client.get_channels st.current_user s in
+        match (fst resp) with
+        | "fail" ->
+        ANSITerminal.(print_string [Bold; blue] "Not a valid switch"); main st
+        | "success" ->
         st.current_org <- Some s;
         main st
+      )
     | Channels -> (
       match st.current_org with
       | None -> failwith "shouldn't happen"
-      | Some o -> 
-        let resp = Client.get_messages st.current_user s o in
+      | Some o -> (
+        let resp = Client.get_messages st.current_user s o 0 in (*int is the index, this is probably wrong?*)
+        match (fst resp) with 
+        | "fail" ->
+        ANSITerminal.(print_string [Bold; blue] "Not a valid switch"); main st
+        | "success" ->
         st.current_channel <- Some s;
         main st
+      )
     )
     | Messages -> failwith "shouldn't happen"
   )
@@ -148,7 +158,7 @@ and login () =
   ANSITerminal.(print_string [Bold; green]
   	"Password: ");
   let password = read_line () in
-  if (login_user username password).status then
+  if (login_user username password).status = "success" then
 	main
   {
     current_org = None;
@@ -173,7 +183,7 @@ and register () =
   	"Password: ");
   let password = read_line () in
   let clientpass = register_user username password in
-  if clientpass.status then
+  if clientpass.status = "success" then
   let _ = ANSITerminal.(print_string [Bold; green]
   	"Success!") in
   main
