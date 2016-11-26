@@ -310,7 +310,7 @@ let remove_user_organization_api request =
       let requester_id = json_body |> member "requester_id" |> to_string in 
       match (get_org_data all_data organization_id) with 
       | Some o ->
-        if o.admin = requester_id then
+        if (o.admin = requester_id) || (user_id = requester_id) then
           if ((remove_user_org all_data user_id organization_id) = true) then
             {status_code=200; response_body="{\"status\":\"success\"," ^ 
             "\"message\":\"User successfully removed from the organization\"}"}
@@ -319,7 +319,8 @@ let remove_user_organization_api request =
             "\"message\":\"User could not be removed from the organization\"}"} 
         else
           {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
-          ":\"The requesting user is not the admin of this organization\"}"} 
+          ":\"The requesting user needs to be the admin of this organization " ^ 
+          "or the user to be removed\"}"} 
       | None ->
         {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Organization does not exist\"}"} 
@@ -337,13 +338,12 @@ let create_channel_api request =
     try
       let json_body = Yojson.Basic.from_string request.request_body in
       let organization_id = json_body |> member "organization_id" |> to_string in
-      let user_id = json_body |> member "user_id" |> to_string in 
       let channel_id = json_body |> member "channel_id" |> to_string in
       if (starts_with channel_id "directmessage") then
         let channel_list = split (regexp_string "@") channel_id in
         let first_user = List.nth channel_list 1 in
         let second_user = List.nth channel_list 2 in
-        if (add_channel all_data organization_id channel_id user_id false) = 
+        if (add_channel all_data organization_id channel_id false) = 
         true then
           if ((join_channel all_data channel_id first_user organization_id) = 
           true) && ((join_channel all_data channel_id second_user 
@@ -359,7 +359,7 @@ let create_channel_api request =
           {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
           ":\"Direct message channel between the two users already exists\"}"}  
       else
-        if ((add_channel all_data organization_id channel_id user_id true) = 
+        if ((add_channel all_data organization_id channel_id true) = 
         true) && ((add_users_to_channel organization_id channel_id) = true) then
           {status_code=200; response_body="{\"status\":\"success\",\"message\"" ^ 
           ":\"Channel in organization successfully created\"}"}  
@@ -471,21 +471,21 @@ let get_messages_api request =
       match (get_channel_data all_data organization_id channel_id) with
       | Some c ->
         if (List.mem user_id c.users) = true then
-          let rec get_10_messages cur_index end_index cur_message_list =
-            if (cur_index > end_index) || (cur_index >= List.length c.messages) 
-            then
-              cur_message_list
-            else
-              let cur_message = List.nth c.messages cur_index in
-              get_10_messages (cur_index + 1) end_index 
-              ((serialize_message cur_message)::cur_message_list)
-          in
-          let messages_list = get_10_messages start_index (start_index + 9) [] in
-          {status_code=200; response_body="{\"status\":\"success\",\"messages\":" ^
-          "[" ^ (String.concat "," messages_list) ^ "]}"}
+          let messages_list_option = get_recent_msg all_data organization_id 
+          channel_id start_index 10 in
+          match messages_list_option with
+          | Some messages_list ->
+            let serialized_messages_list = List.rev (List.map (fun m -> 
+            serialize_message m) messages_list) in
+            {status_code=200; response_body="{\"status\":\"success\"," ^ 
+            "\"messages\": [" ^ (String.concat "," serialized_messages_list) 
+            ^ "]}"}
+          | None ->
+            {status_code=200; response_body="{\"status\":\"failure\"," ^ 
+            "\"message\": \"No messages could be retrieved\"}"} 
         else
-          {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
-          ":\"User does not belong to this channel\"}"}         
+          {status_code=200; response_body="{\"status\":\"failure\"," ^ 
+          "\"message\"" ^ ":\"User does not belong to this channel\"}"}         
       | None ->
         {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^ 
         ":\"Channel does not exist in this organization\"}"}  
