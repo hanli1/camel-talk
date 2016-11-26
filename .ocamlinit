@@ -1,8 +1,9 @@
 #require "yojson";;
 open Yojson.Safe;;
-
+#require "str";;
 #require "ANSITerminal";;
 #use "renderer.ml";;
+#use "parser.ml";;
 
 let msg = to_basic (from_string "{\"message\": {\"text\": \"hi\"}, \"message_type\": \"simple\", \"user_id\": \"han\", \"time_stamp\": \"123\"}");;
 
