@@ -29,7 +29,7 @@ let sort_channel (chan : channel option) : channel option =
     name=c.name;
     users=(List.sort cmp_str c.users);
     is_public=c.is_public;
-    messages=(List.map fix_timestamp c.messages);
+    message_count=c.message_count;
   }
   | None -> None
 
@@ -232,23 +232,7 @@ let populate_tests1 = [
 
   "get_channel_data1" >::
     (fun _ -> assert_equal (Some {name="channel1"; is_public=true;
-      users=["user2"; "user3"]; messages=[
-      {
-        user_id="user2";
-        timestamp=0;
-        body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))
-      };
-      {
-        user_id="user3";
-        timestamp=0;
-        body=(ReminderMessage ("foo", 100))
-      };
-      {
-        user_id="user2";
-        timestamp=0;
-        body=(SimpleMessage "msg1")
-      };
-      ]})
+      users=["user2"; "user3"]; message_count=3})
 
       (sort_channel (get_channel_data d1 "org1" "channel1")));
 
@@ -330,7 +314,11 @@ let populate_tests1 = [
 
   "get_channel_data2" >::
     (fun _ -> assert_equal (Some {name="channel2"; is_public=false;
-      users=["user1"; "user3"]; messages=[
+      users=["user1"; "user3"]; message_count=2})
+      (sort_channel (get_channel_data d1 "org1" "channel2")));
+
+  "get_recent_msg5" >::
+    (fun _ -> assert_equal (Some [
       {
         user_id="user3";
         timestamp=0;
@@ -341,12 +329,16 @@ let populate_tests1 = [
         timestamp=0;
         body=(SimpleMessage "msg2");
       };
-      ]})
-      (sort_channel (get_channel_data d1 "org1" "channel2")));
+      ])
+    (fix_timestamps (get_recent_msg d1 "org1" "channel2" 0 2)));
 
   "get_channel_data3" >::
     (fun _ -> assert_equal (Some {name="channel3"; is_public=true;
-      users=["user3"; "user5"]; messages=[
+      users=["user3"; "user5"]; message_count=2})
+      (sort_channel (get_channel_data d1 "org2" "channel3")));
+
+  "get_recent_msg6" >::
+    (fun _ -> assert_equal (Some [
       {
         user_id="user5";
         timestamp=0;
@@ -357,17 +349,17 @@ let populate_tests1 = [
         timestamp=0;
         body=(SimpleMessage "msg4");
       };
-      ]})
-      (sort_channel (get_channel_data d1 "org2" "channel3")));
+      ])
+    (fix_timestamps (get_recent_msg d1 "org2" "channel3" 0 2)));
 
   "get_channel_data4" >::
     (fun _ -> assert_equal (Some {name="channel4"; is_public=true;
-      users=["user3"; "user4"; "user5"]; messages=[]})
+      users=["user3"; "user4"; "user5"]; message_count=0})
       (sort_channel (get_channel_data d1 "org2" "channel4")));
 
   "get_channel_data5" >::
     (fun _ -> assert_equal (Some {name="channel5"; is_public=true;
-      users=["user4"]; messages=[]})
+      users=["user4"]; message_count=0})
       (sort_channel (get_channel_data d1 "org2" "channel5")));
 
   "get_channel_data6" >::
@@ -422,53 +414,28 @@ let backup_tests1 = [
 
   "get_channel_data1" >::
     (fun _ -> assert_equal (Some {name="channel1"; is_public=true;
-      users=["user2"; "user3"]; messages=[{user_id="user2"; timestamp=0;
-      body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))};
-      {user_id="user3"; timestamp=0; body=(ReminderMessage ("foo", 100))};
-      {user_id="user2"; timestamp=0; body=(SimpleMessage "msg1")};]})
+      users=["user2"; "user3"]; message_count=3})
 
       (sort_channel (get_channel_data d2 "org1" "channel1")));
 
   "get_channel_data2" >::
     (fun _ -> assert_equal (Some {name="channel2"; is_public=false;
-      users=["user1"; "user3"]; messages=[
-      {
-        user_id="user3";
-        timestamp=0;
-        body=(SimpleMessage "msg3");
-      };
-      {
-        user_id="user1";
-        timestamp=0;
-        body=(SimpleMessage "msg2");
-      };
-      ]})
+      users=["user1"; "user3"]; message_count=2})
       (sort_channel (get_channel_data d2 "org1" "channel2")));
 
   "get_channel_data3" >::
     (fun _ -> assert_equal (Some {name="channel3"; is_public=true;
-      users=["user3"; "user5"]; messages=[
-      {
-        user_id="user5";
-        timestamp=0;
-        body=(SimpleMessage "msg5");
-      };
-      {
-        user_id="user5";
-        timestamp=0;
-        body=(SimpleMessage "msg4");
-      };
-      ]})
+      users=["user3"; "user5"]; message_count=2})
       (sort_channel (get_channel_data d2 "org2" "channel3")));
 
   "get_channel_data4" >::
     (fun _ -> assert_equal (Some {name="channel4"; is_public=true;
-      users=["user3"; "user4"; "user5"]; messages=[]})
+      users=["user3"; "user4"; "user5"]; message_count=0})
       (sort_channel (get_channel_data d2 "org2" "channel4")));
 
   "get_channel_data5" >::
     (fun _ -> assert_equal (Some {name="channel5"; is_public=true;
-      users=["user4"]; messages=[]})
+      users=["user4"]; message_count=0})
       (sort_channel (get_channel_data d2 "org2" "channel5")));
 
   "get_channel_data6" >::
@@ -536,7 +503,12 @@ let populate_tests2 = [
 
   "get_channel_data1" >::
     (fun _ -> assert_equal (Some {name="channel1"; is_public=true;
-      users=["user2"; "user3"]; messages=[
+      users=["user2"; "user3"]; message_count=3})
+
+      (sort_channel (get_channel_data d3 "org1" "channel1")));
+
+  "get_recent_msg_d3_1" >::
+    (fun _ -> assert_equal (Some [
       {
         user_id="user2";
         timestamp=0;
@@ -552,13 +524,16 @@ let populate_tests2 = [
         timestamp=0;
         body=(SimpleMessage "msg1")
       };
-      ]})
-
-      (sort_channel (get_channel_data d3 "org1" "channel1")));
+      ])
+    (fix_timestamps (get_recent_msg d3 "org1" "channel1" 0 3)));
 
   "get_channel_data2" >::
     (fun _ -> assert_equal (Some {name="channel2"; is_public=false;
-      users=["user1"; "user3"]; messages=[
+      users=["user1"; "user3"]; message_count=2})
+      (sort_channel (get_channel_data d3 "org1" "channel2")));
+
+  "get_recent_msgd3_2" >::
+    (fun _ -> assert_equal (Some [
       {
         user_id="user3";
         timestamp=0;
@@ -569,8 +544,8 @@ let populate_tests2 = [
         timestamp=0;
         body=(SimpleMessage "msg2");
       };
-      ]})
-      (sort_channel (get_channel_data d3 "org1" "channel2")));
+      ])
+    (fix_timestamps (get_recent_msg d3 "org1" "channel2" 0 2)));
 
   "get_channel_data6" >::
     (fun _ -> assert_equal None (get_channel_data d3 "org1" "channel6"));
@@ -615,39 +590,12 @@ let backup_tests2 = [
 
   "get_channel_data1" >::
     (fun _ -> assert_equal (Some {name="channel1"; is_public=true;
-      users=["user2"; "user3"]; messages=[
-      {
-        user_id="user2";
-        timestamp=0;
-        body=(PollMessage ("poll1", [("opt1",2);("opt2",3);("opt3",4)]))
-      };
-      {
-        user_id="user3";
-        timestamp=0;
-        body=(ReminderMessage ("foo", 100))
-      };
-      {
-        user_id="user2";
-        timestamp=0;
-        body=(SimpleMessage "msg1")
-      };
-      ]})
+      users=["user2"; "user3"]; message_count=3})
       (sort_channel (get_channel_data d4 "org1" "channel1")));
 
   "get_channel_data2" >::
     (fun _ -> assert_equal (Some {name="channel2"; is_public=false;
-      users=["user1"; "user3"]; messages=[
-      {
-        user_id="user3";
-        timestamp=0;
-        body=(SimpleMessage "msg3");
-      };
-      {
-        user_id="user1";
-        timestamp=0;
-        body=(SimpleMessage "msg2");
-      };
-      ]})
+      users=["user1"; "user3"]; message_count=2})
       (sort_channel (get_channel_data d4 "org1" "channel2")));
 
   "get_channel_data6" >::

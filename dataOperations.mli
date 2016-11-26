@@ -22,7 +22,7 @@ type message = {
  *)
 type channel = {
   name : string;
-  messages : message list;
+  message_count : int;
   users : string list;
   is_public : bool;
 }

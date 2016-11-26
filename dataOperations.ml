@@ -11,7 +11,7 @@ type message = {
 
 type channel = {
   name : string;
-  messages : message list;
+  message_count : int;
   users : string list;
   is_public : bool;
 }
@@ -366,10 +366,9 @@ let get_channel_data data orgname channame =
   try (
     let org = get_org data.organizations orgname in
     let chan = get_chan org.channels_mut channame in
-    let messages = List.rev (DynArray.to_list chan.messages_mut) in
     Some {
       name=chan.name_mut;
-      messages=messages;
+      message_count=(DynArray.length chan.messages_mut);
       users=chan.users_mut;
       is_public=chan.is_public_mut
     }
