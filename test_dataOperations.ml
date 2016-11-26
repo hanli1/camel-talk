@@ -7,6 +7,11 @@ let cmp_str (s1 : string) (s2 : string) : int =
 let fix_timestamp (m : message) : message =
   {m with timestamp=0}
 
+let fix_timestamps (m : message list option) : message list option =
+  match m with
+  | Some msgs -> Some (List.map fix_timestamp msgs)
+  | None -> None
+
 let sort_org (org : organization option) : organization option =
   match org with
   | Some o -> Some
@@ -206,25 +211,114 @@ let populate_tests1 = [
 
   "get_channel_data1" >::
     (fun _ -> assert_equal (Some {name="channel1"; is_public=true;
-      users=["user2"; "user3"]; messages=[{user_id="user2"; timestamp=0;
-      body=(SimpleMessage "msg1")}; {user_id="user3"; timestamp=0;
-      body=(ReminderMessage ("foo", 100))}; {user_id="user2"; timestamp=0;
-      body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))}]})
+      users=["user2"; "user3"]; messages=[
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))
+      };
+      {
+        user_id="user3";
+        timestamp=0;
+        body=(ReminderMessage ("foo", 100))
+      };
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(SimpleMessage "msg1")
+      };
+      ]})
 
       (sort_channel (get_channel_data d1 "org1" "channel1")));
+
+  "get_recent_msg0" >::
+    (fun _ -> assert_equal (Some [
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))
+      };
+      {
+        user_id="user3";
+        timestamp=0;
+        body=(ReminderMessage ("foo", 100))
+      };
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(SimpleMessage "msg1")
+      };
+      ])
+
+    (fix_timestamps (get_recent_msg d1 "org1" "channel1" 0 3)));
+
+  "get_recent_msg1" >::
+    (fun _ -> assert_equal (Some [
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))
+      };
+      {
+        user_id="user3";
+        timestamp=0;
+        body=(ReminderMessage ("foo", 100))
+      };
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(SimpleMessage "msg1")
+      };
+      ])
+
+    (fix_timestamps (get_recent_msg d1 "org1" "channel1" 0 10)));
+
+  "get_recent_msg2" >::
+    (fun _ -> assert_equal (Some [
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))
+      };
+      ])
+
+    (fix_timestamps (get_recent_msg d1 "org1" "channel1" 0 1)));
+
+  "get_recent_msg3" >::
+    (fun _ -> assert_equal (Some [])
+
+    (fix_timestamps (get_recent_msg d1 "org1" "channel1" 0 0)));
+
+  "get_recent_msg4" >::
+    (fun _ -> assert_equal (Some [
+      {
+        user_id="user3";
+        timestamp=0;
+        body=(ReminderMessage ("foo", 100))
+      };
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(SimpleMessage "msg1")
+      };
+      ])
+
+    (fix_timestamps (get_recent_msg d1 "org1" "channel1" 1 2)));
+
+
 
   "get_channel_data2" >::
     (fun _ -> assert_equal (Some {name="channel2"; is_public=false;
       users=["user1"; "user3"]; messages=[
       {
-        user_id="user1";
-        timestamp=0;
-        body=(SimpleMessage "msg2");
-      };
-      {
         user_id="user3";
         timestamp=0;
         body=(SimpleMessage "msg3");
+      };
+      {
+        user_id="user1";
+        timestamp=0;
+        body=(SimpleMessage "msg2");
       };
       ]})
       (sort_channel (get_channel_data d1 "org1" "channel2")));
@@ -235,12 +329,12 @@ let populate_tests1 = [
       {
         user_id="user5";
         timestamp=0;
-        body=(SimpleMessage "msg4");
+        body=(SimpleMessage "msg5");
       };
       {
         user_id="user5";
         timestamp=0;
-        body=(SimpleMessage "msg5");
+        body=(SimpleMessage "msg4");
       };
       ]})
       (sort_channel (get_channel_data d1 "org2" "channel3")));
@@ -308,9 +402,9 @@ let backup_tests1 = [
   "get_channel_data1" >::
     (fun _ -> assert_equal (Some {name="channel1"; is_public=true;
       users=["user2"; "user3"]; messages=[{user_id="user2"; timestamp=0;
-      body=(SimpleMessage "msg1")}; {user_id="user3"; timestamp=0;
-      body=(ReminderMessage ("foo", 100))}; {user_id="user2"; timestamp=0;
-      body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))}]})
+      body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))};
+      {user_id="user3"; timestamp=0; body=(ReminderMessage ("foo", 100))};
+      {user_id="user2"; timestamp=0; body=(SimpleMessage "msg1")};]})
 
       (sort_channel (get_channel_data d2 "org1" "channel1")));
 
@@ -318,14 +412,14 @@ let backup_tests1 = [
     (fun _ -> assert_equal (Some {name="channel2"; is_public=false;
       users=["user1"; "user3"]; messages=[
       {
-        user_id="user1";
-        timestamp=0;
-        body=(SimpleMessage "msg2");
-      };
-      {
         user_id="user3";
         timestamp=0;
         body=(SimpleMessage "msg3");
+      };
+      {
+        user_id="user1";
+        timestamp=0;
+        body=(SimpleMessage "msg2");
       };
       ]})
       (sort_channel (get_channel_data d2 "org1" "channel2")));
@@ -336,12 +430,12 @@ let backup_tests1 = [
       {
         user_id="user5";
         timestamp=0;
-        body=(SimpleMessage "msg4");
+        body=(SimpleMessage "msg5");
       };
       {
         user_id="user5";
         timestamp=0;
-        body=(SimpleMessage "msg5");
+        body=(SimpleMessage "msg4");
       };
       ]})
       (sort_channel (get_channel_data d2 "org2" "channel3")));
@@ -421,10 +515,23 @@ let populate_tests2 = [
 
   "get_channel_data1" >::
     (fun _ -> assert_equal (Some {name="channel1"; is_public=true;
-      users=["user2"; "user3"]; messages=[{user_id="user2"; timestamp=0;
-      body=(SimpleMessage "msg1")}; {user_id="user3"; timestamp=0;
-      body=(ReminderMessage ("foo", 100))}; {user_id="user2"; timestamp=0;
-      body=(PollMessage ("poll1", [("opt1",2);("opt2",3);("opt3",4)]))}]})
+      users=["user2"; "user3"]; messages=[
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(PollMessage ("poll1", [("opt1",2);("opt2",3);("opt3",4)]))
+      };
+      {
+        user_id="user3";
+        timestamp=0;
+        body=(ReminderMessage ("foo", 100))
+      };
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(SimpleMessage "msg1")
+      };
+      ]})
 
       (sort_channel (get_channel_data d3 "org1" "channel1")));
 
@@ -432,14 +539,14 @@ let populate_tests2 = [
     (fun _ -> assert_equal (Some {name="channel2"; is_public=false;
       users=["user1"; "user3"]; messages=[
       {
-        user_id="user1";
-        timestamp=0;
-        body=(SimpleMessage "msg2");
-      };
-      {
         user_id="user3";
         timestamp=0;
         body=(SimpleMessage "msg3");
+      };
+      {
+        user_id="user1";
+        timestamp=0;
+        body=(SimpleMessage "msg2");
       };
       ]})
       (sort_channel (get_channel_data d3 "org1" "channel2")));
@@ -487,25 +594,37 @@ let backup_tests2 = [
 
   "get_channel_data1" >::
     (fun _ -> assert_equal (Some {name="channel1"; is_public=true;
-      users=["user2"; "user3"]; messages=[{user_id="user2"; timestamp=0;
-      body=(SimpleMessage "msg1")}; {user_id="user3"; timestamp=0;
-      body=(ReminderMessage ("foo", 100))}; {user_id="user2"; timestamp=0;
-      body=(PollMessage ("poll1", [("opt1",2);("opt2",3);("opt3",4)]))}]})
-
+      users=["user2"; "user3"]; messages=[
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(PollMessage ("poll1", [("opt1",2);("opt2",3);("opt3",4)]))
+      };
+      {
+        user_id="user3";
+        timestamp=0;
+        body=(ReminderMessage ("foo", 100))
+      };
+      {
+        user_id="user2";
+        timestamp=0;
+        body=(SimpleMessage "msg1")
+      };
+      ]})
       (sort_channel (get_channel_data d4 "org1" "channel1")));
 
   "get_channel_data2" >::
     (fun _ -> assert_equal (Some {name="channel2"; is_public=false;
       users=["user1"; "user3"]; messages=[
       {
-        user_id="user1";
-        timestamp=0;
-        body=(SimpleMessage "msg2");
-      };
-      {
         user_id="user3";
         timestamp=0;
         body=(SimpleMessage "msg3");
+      };
+      {
+        user_id="user1";
+        timestamp=0;
+        body=(SimpleMessage "msg2");
       };
       ]})
       (sort_channel (get_channel_data d4 "org1" "channel2")));
@@ -531,7 +650,6 @@ let backup_tests3 = [
   "get_channel_data0"
     >:: (fun _ -> assert_equal None (get_channel_data d5 "foo" "bar"));
 ]
-
 
 
 let suite = "Data ops suite" >:::

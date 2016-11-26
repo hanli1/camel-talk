@@ -366,13 +366,24 @@ let get_channel_data data orgname channame =
   try (
     let org = get_org data.organizations orgname in
     let chan = get_chan org.channels_mut channame in
-    let messages = DynArray.to_list chan.messages_mut in
+    let messages = List.rev (DynArray.to_list chan.messages_mut) in
     Some {
       name=chan.name_mut;
       messages=messages;
       users=chan.users_mut;
       is_public=chan.is_public_mut
     }
+  ) with Not_found -> None
+
+let get_recent_msg data orgname channame s num =
+  try (
+    let org = get_org data.organizations orgname in
+    let chan = get_chan org.channels_mut channame in
+    let end_idx = max 0 ((DynArray.length chan.messages_mut)-s) in
+    let start = max 0 (end_idx-num) in
+    let len = end_idx-start in
+    Some (List.rev (DynArray.to_list 
+          (DynArray.sub chan.messages_mut start len)))
   ) with Not_found -> None
 
 let add_user data uid p =

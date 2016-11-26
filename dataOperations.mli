@@ -82,6 +82,13 @@ val get_org_data : t -> string -> organization option
  *)
 val get_channel_data : t -> string -> string -> channel option
 
+(**
+ * [get_recent_msg t x n] fetches n messages starting at the xth most recent
+ * messages, 0-indexed. The most recent message is at index 0. The messages are
+ * returned in order from most recent to least recent.
+ *)
+val get_recent_msg : t -> string -> string -> int -> int -> message list option
+
 (** 
  * [add_user t u p] mutates t to include user with username u and password p.
  *)
