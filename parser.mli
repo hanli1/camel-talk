@@ -25,8 +25,10 @@ type command =
   | CSimpleMessage of string
   | CReminderMessage of string * int
   | CPollMessage of string * string list
+  | CHelp
   | CBack
   | CIllegal
+  | CLogout
 
 type screen =
   | Messages

@@ -8,6 +8,7 @@ type command =
   | CHelp
   | CBack
   | CIllegal
+  | CLogout
 
 type screen =
   | Messages
@@ -64,8 +65,8 @@ let parse_organizations_screen str =
 (** text_to_message [cmd] is a command representing that message. *)
 let text_to_message str screen=
   if str = "back" then CBack
-  else str = "help" hen CHelp
-  else
+  else if str = "help" then CHelp
+  else if str = "logout" then CLogout else
   match screen with
   | Messages -> parse_messages_screen str
   | Channels -> parse_channels_screen str
