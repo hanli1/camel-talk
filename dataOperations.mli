@@ -49,6 +49,9 @@ type organization = {
 (** The representation type of the data store. *)
 type t
 
+(** [make_data ()] is am empty data store, with no users or organizations. *)
+val make_data : unit -> t
+
 (** 
  * [load_data ()] extracts a data structure from the data store and returns
  * its representation type.
@@ -131,4 +134,3 @@ val add_org : t -> string -> string -> bool
 
 (** [remove_org t o] removes organization [o]. *)
 val remove_org : t -> string -> bool
-

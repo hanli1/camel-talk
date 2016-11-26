@@ -54,11 +54,16 @@ type t = {
 (******************************************************************************)
 (*                              Helper Functions                              *)
 (******************************************************************************)
+
+(* get_org returns the organization_mutable with name [orgname] in DynArray
+ * [orgs]. Raises Not_found if it doesn't exist. *)
 let get_org (orgs : organization_mutable DynArray.t)
             (orgname : string) : organization_mutable =
   let oidx = DynArray.index_of (fun org -> org.name_mut = orgname) orgs in
   DynArray.get orgs oidx
 
+(* get_chan returns the channel_mutable with name [channame] in DynArray
+ * [chans]. Raises Not_found if it doesn't exist. *)
 let get_chan (chans : channel_mutable DynArray.t)
              (channame : string) : channel_mutable =
   let cidx = DynArray.index_of
@@ -67,13 +72,12 @@ let get_chan (chans : channel_mutable DynArray.t)
   in
   DynArray.get chans cidx
 
-(******************************************************************************)
-(*                         Text Database Interaction                          *)
-(******************************************************************************)
-
+(* Same as Sys.command, but evaluates to unit. *)
 let cmd (c : string) : unit =
   let _ = Sys.command c in ()
 
+(* Removes the database/ directory if it exists, and creates a new one with
+ * the file users.txt. *)
 let init_data () : unit =
   let open Sys in
   let _ =
@@ -232,6 +236,13 @@ let read_data () : t =
   Array.iter (add_org organizations "database/") dbfiles;
 
   {users=users; organizations=organizations}
+
+(******************************************************************************)
+(*                         Text Database Interaction                          *)
+(******************************************************************************)
+
+let make_data () =
+  {users=DynArray.create(); organizations=DynArray.create()}
 
 let load_data () =
   try (
@@ -403,12 +414,14 @@ let add_user_org data uid orgname =
   ) with Not_found -> false
 
 let remove_user_org data uid orgname =
-  let org = get_org data.organizations orgname in
-  if List.mem uid org.users_mut then (
-    org.users_mut <- List.filter (fun u -> u <> uid) org.users_mut;
-    true
-  )
-  else false
+  try (
+    let org = get_org data.organizations orgname in
+    if List.mem uid org.users_mut then (
+      org.users_mut <- List.filter (fun u -> u <> uid) org.users_mut;
+      true
+    )
+    else false
+  ) with Not_found -> false
 
 let add_message data oname cname uid msg_body =
   try (
