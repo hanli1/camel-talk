@@ -199,10 +199,8 @@ and register () =
      current_screen = Organizations;
      logged_out = false;
   } in
-  Lwt_main.run (Lwt.pick [draw_update st
- ; 
-  return (main st)
-  ]);
+  Lwt_main.run (* (Lwt.pick [return (main st); draw_update st]); *)
+  (draw_update st);
   else
   ANSITerminal.(print_string [Bold; blue]
   	"An error occured. Please register again.");
@@ -210,7 +208,9 @@ and register () =
 
 
 and draw_update c =
-  Lwt_unix.sleep 0.5 >>= (fun () -> 
+  Lwt_unix.sleep 2.5 >>= (fun () ->
+(*   (ANSITerminal.erase Above);
+  ANSITerminal.(print_string [Blink] "> "); *)
   match c.current_screen with
   | Organizations -> 
       if c.logged_out then Lwt.return ()

@@ -106,7 +106,7 @@ let create_organization usern orgid =
   ~body:(`String 
     (
     Yojson.Basic.to_string 
-    (`Assoc [("user_id", `String usern);("orgname", `String orgid)])
+    (`Assoc [("user_id", `String usern);("organization_id", `String orgid)])
     )
   ) in
   let defresp = resp >>= (fun (_,body) ->
@@ -124,7 +124,7 @@ let delete_organization usern orgid =
   ~body:(`String 
     (
     Yojson.Basic.to_string 
-    (`Assoc [("user_id", `String usern);("orgname", `String orgid)])
+    (`Assoc [("user_id", `String usern);("organization_id", `String orgid)])
     )
   ) in
   let defresp = resp >>= (fun (_,body) ->
