@@ -21,10 +21,10 @@ type request_record = {
 }
 
 (**
- * [print_helper] logs the string [s] to a file
+ * [print_helper] logs the string [s] to a file [f]
  *)
-let print_helper s =
-  (let oc = open_out_gen [Open_creat; Open_append] 0o777 "server_log.txt" in
+let print_helper s f =
+  (let oc = open_out_gen [Open_creat; Open_append] 0o777 f in
   Printf.fprintf oc "%s\n" s;
   close_out oc;
   ())
@@ -396,7 +396,8 @@ let request_router _conn req body =
     fun body -> 
       (
       print_helper ("Request Information" ^ "\n\nUri: " ^ uri ^ "\nMethod: " 
-      ^ meth ^ "\nHeaders: \n" ^ headers ^ "Body: " ^ body ^ "\n");
+      ^ meth ^ "\nHeaders: \n" ^ headers ^ "Body: " ^ body ^ "\n") 
+      "server_log.txt";
       let response_result =
         if uri_path = "/send_message" then
           send_message_api {request_info=req; request_body=body}
@@ -432,7 +433,22 @@ let server =
   Server.create ~mode:(`TCP (`Port 8000)) (Server.make ~callback:request_router ())
 
 (**
+ * [data_backup_thread] backs up all server side data by flushing it to the 
+ * file system every 2 minutes 
+ *)
+let rec data_backup_thread = 
+  fun () ->
+    (
+      Lwt_unix.sleep 120.0 >>= (fun () ->
+      if backup_data all_data = false then
+        Lwt.return ()
+      else
+        data_backup_thread ()
+      )
+    )
+
+(**
  * Initializes a thread thats runs the code in [server], which starts up the 
  * HTTP server 
  *)
-let () = ignore (Lwt_main.run server)
+let () = ignore (Lwt_main.run (Lwt.pick [server; data_backup_thread ()]))
