@@ -7,6 +7,8 @@
 *.cmx
 *.cmxs
 *.cmxa
+*.DS_Store
+server_log.txt
 
 # ocamlbuild working directory
 _build/
@@ -18,3 +20,7 @@ _build/
 # oasis generated files
 setup.data
 setup.log
+
+# miscellaneous
+.DS_Store
+database/
