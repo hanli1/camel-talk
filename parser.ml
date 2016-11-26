@@ -5,6 +5,7 @@ type command =
   | CSimpleMessage of string
   | CReminderMessage of string * int
   | CPollMessage of string * string list
+  | CBack
   | CIllegal
 
 type screen =
@@ -61,6 +62,8 @@ let parse_organizations_screen str =
 
 (** text_to_message [cmd] is a command representing that message. *)
 let text_to_message str screen=
+  if str = "back" then CBack
+  else
   match screen with
   | Messages -> parse_messages_screen str
   | Channels -> parse_channels_screen str
