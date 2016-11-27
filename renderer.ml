@@ -119,7 +119,7 @@ let print_meta_data name time =
   print_across_screen divider;
   ANSITerminal.(print_string [green] ("| "^name));
   let time_length = String.length time in
-  set_and_print (get_width() - time_length - 1) (cursor_y()) [] (time ^ " |");
+  set_and_print (get_width() - time_length - 1) (get_height()) [] (time ^ " |");
   print_across_screen divider
 
 
