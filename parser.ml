@@ -17,11 +17,17 @@ type screen =
 
 
 let parse_string str =
-  let first_space_index = String.index str ' ' in
-  let keyword = String.sub str 0 first_space_index in
-  let str_length = String.length str in
-  let text = String.sub str (first_space_index + 1) (str_length - first_space_index - 1) in
-  (keyword, text)
+  let lst = Str.split (Str.regexp " ") str in
+  match lst with
+  | [] -> failwith "Blank string"
+  | h::[] -> ("", h)
+  | h::t -> begin
+    let first_space_index = String.index str ' ' in
+    let keyword = String.sub str 0 first_space_index in
+    let str_length = String.length str in
+    let text = String.sub str (first_space_index + 1) (str_length - first_space_index - 1) in
+    (keyword, text)
+    end
 
 let parse_string_to_list str =
   Str.split (Str.regexp ", ") str

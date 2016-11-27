@@ -84,7 +84,8 @@ let render_channels_list curr_org resp_obj =
   print_newline();
   ANSITerminal.(print_string [green] ("Private Channels -> "));
   render_channels_list_helper (get_member_list_of_string resp_obj "private_channels");
-  print_newline()
+  print_newline();
+  flush_all ()
 
 let render_organizations_list resp_obj =
   ANSITerminal.(print_string [blue] ("Organizations list: "));
@@ -152,6 +153,8 @@ let rec render_channel_messages_helper lst =
   | h::t -> render_message h; render_channel_messages_helper t
 
 let render_channel_messages resp_obj =
-  render_channel_messages_helper (json_to_list resp_obj)
+  let open Yojson.Basic.Util in
+  render_channel_messages_helper (json_to_list (resp_obj |> member "messages"));
+  flush_all ()
 
 
