@@ -23,7 +23,7 @@ type command =
   | CIllegal
   | CLogout
 
-let current_input = ref ""
+let current_input = ref ""                            
 
 let rec main (st : current_state) : (unit Lwt.t) =
 	Lwt_io.read_char (Lwt_io.stdin) >>=
@@ -263,9 +263,10 @@ and register () =
 and run_app_threads st =
   let termio = Unix.tcgetattr Unix.stdin in
   let () = Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with 
-  Unix.c_icanon = false} in
+  Unix.c_icanon = false; Unix.c_echo = false} in
   let () = ((Lwt_main.run (Lwt.pick [draw_update st; main st]))) in
-  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true}
+  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with 
+  Unix.c_icanon = true; Unix.c_echo = true}
 
 
 and draw_update c =
@@ -350,5 +351,6 @@ MMMM         MMMM           MMMM           MM
   	"\nType \"login\" to Log in, or \"register\" to Register\n");
   ANSITerminal.(print_string [Blink] "> ");
   (let termio = Unix.tcgetattr Unix.stdin in
-  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true});
+  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true; 
+  Unix.c_echo = true;});
   if (read_line ()) = "login" then login () else register ()
