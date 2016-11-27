@@ -115,7 +115,7 @@ let set_and_print x y styles text =
   (* ANSITerminal.restore_cursor() *)
 
 let print_meta_data name time =
-  let divider = "—" in
+  let divider = "─" in
   print_across_screen divider;
   ANSITerminal.(print_string [green] ("| "^name));
   let time_length = String.length time in
@@ -132,19 +132,19 @@ let render_message msg =
   if msg_type = "simple" then begin
     print_meta_data user_id time_stamp;
     ANSITerminal.(print_string [] (get_member_string mess "text"));
-    (* print_linebreak () *)
+    print_newline ()
   end
   else if msg_type = "reminder" then begin
     print_meta_data user_id time_stamp;
     ANSITerminal.(print_string [] ("Reminder set for " ^ (get_member_string mess "reminder")));
-    (* print_linebreak () *)
+    print_newline ()
   end
   else begin
     print_meta_data user_id time_stamp;
     ANSITerminal.(print_string [] (get_member_string mess "pollname"));
     print_newline ();
     print_votes (get_member_list mess "choices");
-    (* print_linebreak () *)
+    print_newline ()
   end
 
 let rec render_channel_messages_helper lst =
