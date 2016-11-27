@@ -23,166 +23,183 @@ type command =
   | CIllegal
   | CLogout
 
+let current_input = ref ""
+
 let rec main (st : current_state) : (unit Lwt.t) =
-	Lwt_io.read_line (Lwt_io.stdin) >>=
+	Lwt_io.read_char (Lwt_io.stdin) >>=
   (
-  fun s ->
-  match text_to_message s st.current_screen with (*doesn't perform repainting*)
-  | CIllegal ->
-  	(ANSITerminal.(print_string [Bold; blue] "Illegal command"); main st)
-  | CCreate s -> (
-    (
-    match st.current_screen with
-    | Organizations -> (
-        let resp = Client.create_organization st.current_user s in
-        if resp.status = "success" then main st
-        else (ANSITerminal.(print_string [Bold; blue] resp.message); main st)
-    )
-    | Channels -> (
-      match st.current_org with
-      | None -> failwith "shouldn't happen"
-      | Some o ->
-        let resp = Client.create_channel st.current_user o s in
-        if resp.status = "success" then main st
-        else (ANSITerminal.(print_string [Bold; blue] resp.message); main st)
-    )
-    | Messages -> failwith "shouldn't happen"
-    )
-  )
-  | CDelete s -> (
-    match st.current_screen with
-    | Organizations ->
-        let resp = Client.delete_organization st.current_user s in (
-        match resp.status with
-        | "failure" ->
-          (ANSITerminal.(print_string [Bold; blue] resp.message); main st)
-        | "success" ->
-          if not (Some s = st.current_org) then main st
-          else (st.current_org <- None;
-          main st)
-        | _ -> failwith "unknown response"
+  fun c ->
+  (
+  if c = '\127' then
+    if !current_input <> "" then
+      let current_input_length = String.length !current_input - 1 in
+      (current_input := String.sub !current_input 0 current_input_length;
+      main st)
+    else
+      main st
+  else if c != '\n' then
+    (current_input := !current_input ^ (Char.escaped c);
+    main st)
+  else
+    let s = !current_input in
+    let () = (current_input := "") in
+    match text_to_message s st.current_screen with (*doesn't perform repainting*)
+    | CIllegal ->
+    	(ANSITerminal.(print_string [Bold; blue] "Illegal command"); main st)
+    | CCreate s -> (
+      (
+      match st.current_screen with
+      | Organizations -> (
+          let resp = Client.create_organization st.current_user s in
+          if resp.status = "success" then main st
+          else (ANSITerminal.(print_string [Bold; blue] resp.message); main st)
       )
-    | Channels -> (
-      match st.current_org with
-      | None -> failwith "shouldn't happen"
-      | Some o ->
-        let resp = Client.delete_channel st.current_user s o in (
-        match resp.status with
-        | "failure" -> (
-          ANSITerminal.(print_string [Bold; blue] resp.message);
-          main st
+      | Channels -> (
+        match st.current_org with
+        | None -> failwith "shouldn't happen"
+        | Some o ->
+          let resp = Client.create_channel st.current_user o s in
+          if resp.status = "success" then main st
+          else (ANSITerminal.(print_string [Bold; blue] resp.message); main st)
+      )
+      | Messages -> failwith "shouldn't happen"
+      )
+    )
+    | CDelete s -> (
+      match st.current_screen with
+      | Organizations ->
+          let resp = Client.delete_organization st.current_user s in (
+          match resp.status with
+          | "failure" ->
+            (ANSITerminal.(print_string [Bold; blue] resp.message); main st)
+          | "success" ->
+            if not (Some s = st.current_org) then main st
+            else (st.current_org <- None;
+            main st)
+          | _ -> failwith "unknown response"
         )
-        | "success" -> (
-          if not (Some s = st.current_channel) then
-            main st
-          else (
-            st.current_channel <- None;
+      | Channels -> (
+        match st.current_org with
+        | None -> failwith "shouldn't happen"
+        | Some o ->
+          let resp = Client.delete_channel st.current_user s o in (
+          match resp.status with
+          | "failure" -> (
+            ANSITerminal.(print_string [Bold; blue] resp.message);
             main st
           )
+          | "success" -> (
+            if not (Some s = st.current_channel) then
+              main st
+            else (
+              st.current_channel <- None;
+              main st
+            )
+          )
+          | _ -> failwith "unknown response"
         )
-        | _ -> failwith "unknown response"
       )
+      | Messages -> failwith "shouldn't happen"
     )
-    | Messages -> failwith "shouldn't happen"
-  )
-  | CSwitch s -> (
-    match st.current_screen with
-    | Organizations -> (
-        let resp = Client.get_channels st.current_user s in
-        match (fst resp) with
-        | "failure" -> (
-          ANSITerminal.(print_string [Bold; blue] "Not a valid switch");
-          main st
+    | CSwitch s -> (
+      match st.current_screen with
+      | Organizations -> (
+          let resp = Client.get_channels st.current_user s in
+          match (fst resp) with
+          | "failure" -> (
+            ANSITerminal.(print_string [Bold; blue] "Not a valid switch");
+            main st
+          )
+          | "success" -> (
+            st.current_org <- Some s;
+            st.current_screen <- Channels;
+            main st
+          )
+          | _ -> failwith "unknown response"
         )
-        | "success" -> (
-          st.current_org <- Some s;
-          st.current_screen <- Channels;
-          main st
-        )
-        | _ -> failwith "unknown response"
-      )
-    | Channels -> (
-      match st.current_org with
-      | None -> failwith "shouldn't happen"
-      | Some o -> (
-        let resp = Client.get_messages st.current_user s o 0 in (*int is the index, this is probably wrong?*)
-        match (fst resp) with
-        | "failure" -> (
-          ANSITerminal.(print_string [Bold; blue] "Not a valid switch");
-          main st
-        )
-        | "success" -> (
-          st.current_channel <- Some s;
-          st.current_screen <- Messages;
-          main st
-        )
-        | _ -> failwith "unknown response"
-      )
-    )
-    | Messages -> failwith "shouldn't happen"
-  )
-  | CSimpleMessage s -> (
-    match st.current_screen with
-    | Messages -> (
-      match st.current_org with
-      | None -> failwith "shouldn't happen"
-      | Some o -> (
-        match st.current_channel with
+      | Channels -> (
+        match st.current_org with
         | None -> failwith "shouldn't happen"
-        | Some c -> (send_message_simple st.current_user c o
-          (`Assoc [("content", `String s)]); main st)
+        | Some o -> (
+          let resp = Client.get_messages st.current_user s o 0 in (*int is the index, this is probably wrong?*)
+          match (fst resp) with
+          | "failure" -> (
+            ANSITerminal.(print_string [Bold; blue] "Not a valid switch");
+            main st
+          )
+          | "success" -> (
+            st.current_channel <- Some s;
+            st.current_screen <- Messages;
+            main st
+          )
+          | _ -> failwith "unknown response"
+        )
       )
+      | Messages -> failwith "shouldn't happen"
     )
-    | _ -> failwith "shouldn't happen"
-  )
-  | CReminderMessage (s, i) -> (
-    match st.current_screen with
-    | Messages -> (
-      match st.current_org with
-      | None -> failwith "shouldn't happen"
-      | Some o -> (
-        match st.current_channel with
+    | CSimpleMessage s -> (
+      match st.current_screen with
+      | Messages -> (
+        match st.current_org with
         | None -> failwith "shouldn't happen"
-        | Some c -> (send_message_reminder st.current_user c o
-          (`Assoc [("content", `String s);("time", `Int i)]); main st)
+        | Some o -> (
+          match st.current_channel with
+          | None -> failwith "shouldn't happen"
+          | Some c -> (send_message_simple st.current_user c o
+            (`Assoc [("content", `String s)]); main st)
+        )
       )
+      | _ -> failwith "shouldn't happen"
     )
-    | _ -> failwith "shouldn't happen"
-  )
-  | CPollMessage (s, xs) -> (
-    match st.current_screen with
-    | Messages -> (
-      match st.current_org with
-      | None -> failwith "shouldn't happen"
-      | Some o -> (
-        match st.current_channel with
+    | CReminderMessage (s, i) -> (
+      match st.current_screen with
+      | Messages -> (
+        match st.current_org with
         | None -> failwith "shouldn't happen"
-        | Some c -> send_message_poll st.current_user c o
-          (`Assoc [
-            ("content", `String s);
-            ("option", `List (List.map (fun x -> `String x) xs))
-          ]);
-          main st
+        | Some o -> (
+          match st.current_channel with
+          | None -> failwith "shouldn't happen"
+          | Some c -> (send_message_reminder st.current_user c o
+            (`Assoc [("content", `String s);("time", `Int i)]); main st)
+        )
       )
+      | _ -> failwith "shouldn't happen"
     )
-    | _ -> failwith "shouldn't happen"
+    | CPollMessage (s, xs) -> (
+      match st.current_screen with
+      | Messages -> (
+        match st.current_org with
+        | None -> failwith "shouldn't happen"
+        | Some o -> (
+          match st.current_channel with
+          | None -> failwith "shouldn't happen"
+          | Some c -> send_message_poll st.current_user c o
+            (`Assoc [
+              ("content", `String s);
+              ("option", `List (List.map (fun x -> `String x) xs))
+            ]);
+            main st
+        )
+      )
+      | _ -> failwith "shouldn't happen"
+    )
+    | CBack -> (
+      match st.current_screen with
+      | Organizations ->
+        ANSITerminal.(print_string [Bold; blue]
+        "Can't go out of organization screen."); main st
+      | Channels ->
+        st.current_screen <- Organizations;
+        st.current_channel <- None;
+        main st
+      | Messages ->
+        st.current_screen <- Channels;
+        main st
+    )
+    | CLogout -> Lwt.return ()
+    | _ -> failwith "unimplemented command"
+    )
   )
-  | CBack -> (
-    match st.current_screen with
-    | Organizations ->
-      ANSITerminal.(print_string [Bold; blue]
-      "Can't go out of organization screen."); main st
-    | Channels ->
-      st.current_screen <- Organizations;
-      st.current_channel <- None;
-      main st
-    | Messages ->
-      st.current_screen <- Channels;
-      main st
-  )
-  | CLogout -> Lwt.return ()
-  | _ -> failwith "unimplemented command"
-)
 
 and login () =
   ANSITerminal.(print_string [Bold; blue]
@@ -197,15 +214,14 @@ and login () =
     ANSITerminal.(print_string [Bold; green]
     "Success!\n");
     flush_all ();
-    let st = {
+    let st =  {
        current_org = None;
        current_channel = None;
        current_user = username;
        current_screen = Organizations;
        logged_out = false;
-    }
-    in
-    ((Lwt_main.run (Lwt.pick [draw_update st; main st])); ());
+    } in
+    run_app_threads st
     )
   else
     ANSITerminal.(print_string [Bold; blue]
@@ -232,30 +248,49 @@ and register () =
        current_screen = Organizations;
        logged_out = false;
     } in
-    ((Lwt_main.run (Lwt.pick [draw_update st; main st])));
+    run_app_threads st
   )
   else
     ANSITerminal.(print_string [Bold; blue]
       "An error occured. Please register again.");
     register ()
 
+(**
+ * [run_app_threads st] starts up the threads necessary for the application
+ * loop to function properly (each thread has access to the application 
+ * state [st])
+ *)
+and run_app_threads st =
+  let termio = Unix.tcgetattr Unix.stdin in
+  let () = Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with 
+  Unix.c_icanon = false} in
+  let () = ((Lwt_main.run (Lwt.pick [draw_update st; main st]))) in
+  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true}
+
 
 and draw_update c =
-  Lwt_unix.sleep 2.5 >>= (fun () ->
+  Lwt_unix.sleep 0.1 >>= (fun () ->
   ANSITerminal.(erase Above);
+  ANSITerminal.(move_cursor (-100) 0);  
   match c.current_screen with
   | Organizations ->
       if c.logged_out then Lwt.return ()
       else
         (render_organizations_list
-        (snd (get_user_organizations c.current_user)); draw_update c)
+        (snd (get_user_organizations c.current_user));
+        ANSITerminal.(print_string [black] (!current_input));
+        flush_all ();
+        draw_update c)
   | Channels ->
       if c.logged_out then Lwt.return ()
       else (
         match c.current_org with
         | None -> failwith "shouldn't happen"
-        | Some o -> render_channels_list o
-            (snd (get_channels c.current_user o)); draw_update c
+        | Some o -> 
+            (render_channels_list o (snd (get_channels c.current_user o));
+            ANSITerminal.(print_string [black] (!current_input));
+            flush_all ();
+            draw_update c)
       )
   | Messages ->
       if c.logged_out then Lwt.return ()
@@ -265,9 +300,12 @@ and draw_update c =
         | Some o -> (
           match c.current_channel with
           | None -> failwith "shouldn't happen"
-          | Some ch -> render_channel_messages
-              (snd (get_messages c.current_user ch o 0)); (*what is start index?*)
-              draw_update c
+          | Some ch -> 
+              (render_channel_messages (snd (get_messages c.current_user 
+              ch o 0));
+              ANSITerminal.(print_string [black] (!current_input));
+              flush_all ();
+              draw_update c)
         )
       )
   )
@@ -311,4 +349,6 @@ MMMM         MMMM           MMMM           MM
   ANSITerminal.(print_string [Bold; blue]
   	"\nType \"login\" to Log in, or \"register\" to Register\n");
   ANSITerminal.(print_string [Blink] "> ");
+  (let termio = Unix.tcgetattr Unix.stdin in
+  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true});
   if (read_line ()) = "login" then login () else register ()
