@@ -131,19 +131,19 @@ let render_message msg =
   let mess = msg |> member "message" in
   if msg_type = "simple" then begin
     print_meta_data user_id time_stamp;
-    ANSITerminal.(print_string [] (get_member_string mess "text"));
+    ANSITerminal.(print_string [] (get_member_string mess "content"));
     print_newline ()
   end
   else if msg_type = "reminder" then begin
     print_meta_data user_id time_stamp;
-    ANSITerminal.(print_string [] ("Reminder set for " ^ (get_member_string mess "reminder")));
+    ANSITerminal.(print_string [] ("Reminder set for " ^ (get_member_string mess "content") ^" for " ^ (get_member_string mess "time")));
     print_newline ()
   end
   else begin
     print_meta_data user_id time_stamp;
-    ANSITerminal.(print_string [] (get_member_string mess "pollname"));
+    ANSITerminal.(print_string [] (get_member_string mess "content"));
     print_newline ();
-    print_votes (get_member_list mess "choices");
+    print_votes (get_member_list mess "options");
     print_newline ()
   end
 
