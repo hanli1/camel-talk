@@ -74,7 +74,7 @@ let register_user usern passw =
 
 let send_message_simple usern chanid orgid jmessage =   
   let _ = Client.post 
-  (Uri.of_string "http://127.0.0.1:8000/send_message_simple") 
+  (Uri.of_string "http://127.0.0.1:8000/send_message") 
   ~body: (
     `String (
   	   Yojson.Basic.to_string 
@@ -87,7 +87,7 @@ let send_message_simple usern chanid orgid jmessage =
 
 let send_message_poll usern chanid orgid jmessage =
   let _ = Client.post 
-  (Uri.of_string "http://127.0.0.1:8000/send_message_poll") 
+  (Uri.of_string "http://127.0.0.1:8000/send_message") 
   ~body: (
     `String (
   	   Yojson.Basic.to_string 
@@ -100,7 +100,7 @@ let send_message_poll usern chanid orgid jmessage =
 
 let send_message_reminder usern chanid orgid jmessage =
   let _ = Client.post 
-  (Uri.of_string "http://127.0.0.1:8000/send_message_simple") 
+  (Uri.of_string "http://127.0.0.1:8000/send_message") 
   ~body:(
     `String (
   	   Yojson.Basic.to_string 
