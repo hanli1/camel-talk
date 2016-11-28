@@ -1,3 +1,4 @@
+open Unix
 
 let json_to_list json =
   let open Yojson.Basic.Util in
@@ -53,15 +54,21 @@ let rec gen_line str_dup str count =
 
 let print_across_screen str_dup =
   ANSITerminal.(print_string [] (gen_line str_dup "" (get_width ())));
-  print_newline() (* WTF WHY DOES THIS LINE FIX FORMATTING??!*)
+  print_newline()
+
+let print_bottom_rectangle str_dup =
+  ANSITerminal.(print_string [] ("└"));
+  ANSITerminal.(print_string [] (gen_line str_dup "" (get_width () - 2 )));
+  ANSITerminal.(print_string [] ("┘"));
+  print_newline()
 
 (* let print_linebreak _ =
   print_newline();
   print_across_screen "_";
   print_newline() *)
 
-let print_newline _ =
-  ANSITerminal.(print_string [] "\n")
+(* let print_newline _ =
+  ANSITerminal.(print_string [] "\n") *)
 
 (* let get_current_org state =
   match state.current_org with
@@ -70,7 +77,7 @@ let print_newline _ =
  *)
 let rec render_channels_list_helper channels_lst=
   match channels_lst with
-  | [] -> ()
+  | [] -> ANSITerminal.(print_string [green] ("No channels of this type"));
   | h::[] -> ANSITerminal.(print_string [green] (" | " ^ h ^ " | "));
   | h::t ->
   ANSITerminal.(print_string [green] (" | " ^ h));
@@ -79,16 +86,24 @@ let rec render_channels_list_helper channels_lst=
 let render_channels_list curr_org resp_obj =
   ANSITerminal.(print_string [blue] ("Current organization: " ^ curr_org));
   print_newline();
-  ANSITerminal.(print_string [green] ("Public Channels -> "));
+  print_across_screen "─";
+  ANSITerminal.(print_string [green] ("Public Channels"));
+  print_newline();(*
+  print_across_screen "─"; *)
   render_channels_list_helper (get_member_list_of_string resp_obj "team_channels");
   print_newline();
-  ANSITerminal.(print_string [green] ("Private Channels -> "));
+  print_across_screen "─";
+  ANSITerminal.(print_string [green] ("Private Channels"));
+  print_newline();
+  (* print_across_screen "─"; *)
   render_channels_list_helper (get_member_list_of_string resp_obj "private_channels");
   print_newline();
+  print_across_screen "─";
   flush_all ()
 
 let render_organizations_list resp_obj =
-  ANSITerminal.(print_string [blue] ("Organizations list: "));
+  print_across_screen "─";
+  ANSITerminal.(print_string [blue] ("Organizations list"));
   print_newline();
   render_channels_list_helper (get_member_list_of_string resp_obj "organizations");
   print_newline();
@@ -115,12 +130,15 @@ let set_and_print x y styles text =
   (* ANSITerminal.restore_cursor() *)
 
 let print_meta_data name time =
+  let date_rec = Unix.localtime (float_of_string time) in
+  let time = string_of_int (date_rec.tm_mon +1) ^ "/" ^ string_of_int date_rec.tm_mday ^ "/" ^ string_of_int (date_rec.tm_year+1900)
+    ^ " " ^ string_of_int date_rec.tm_hour ^ ":"^ string_of_int date_rec.tm_min ^ ":" ^ string_of_int date_rec.tm_sec in
   let divider = "─" in
   print_across_screen divider;
   ANSITerminal.(print_string [green] ("| "^name));
   let time_length = String.length time in
-  set_and_print (get_width() - time_length - 1) (get_height()) [] (time ^ " |");
-  print_across_screen divider
+  set_and_print (get_width() - time_length - 1) (get_height()) [] (time ^ " |")
+  (* print_across_screen divider *)
 
 
 let render_message msg =

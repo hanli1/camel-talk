@@ -31,11 +31,11 @@ type command =
   | CLeave of string * string
   | CVote of string * string
 
-let current_input_stack = ref []                            
+let current_input_stack = ref []
 
 (**
  * [escape_char c] escapes the character [c] and provides compatibility
- * with JSON strings 
+ * with JSON strings
  *)
 let escape_char c =
   if c = '\\' then
@@ -103,7 +103,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
       match st.current_screen with
       | Organizations ->
           let resp = Client.delete_organization st.current_user s in
-          (st.message <- resp.message); 
+          (st.message <- resp.message);
           (
             match resp.status with
             | "failure" -> main st
@@ -117,7 +117,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         match st.current_org with
         | None -> failwith "shouldn't happen"
         | Some o ->
-          let resp = Client.delete_channel st.current_user s o in 
+          let resp = Client.delete_channel st.current_user o s in
           (st.message <- resp.message);
           (
             match resp.status with
@@ -144,7 +144,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
             (st.message <- "Not a valid switch"); main st
           )
           | "success" -> (
-            (st.message <- ("Switched into "^s)); 
+            (st.message <- ("Switched into "^s));
             st.current_org <- Some s;
             st.current_screen <- Channels;
             main st
@@ -161,7 +161,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
             (st.message <- "Not a valid switch"); main st
           )
           | "success" -> (
-            (st.message <- ("Switched into "^o)); 
+            (st.message <- ("Switched into "^o));
             st.current_channel <- Some s;
             st.current_screen <- Messages;
             main st
@@ -240,13 +240,13 @@ let rec main (st : current_state) : (unit Lwt.t) =
     )
     | CScrollUp -> st.current_line <- st.current_line + 10 ; main st
     | CScrollDown -> st.current_line <- st.current_line - 10 ; main st
-    | CHelp -> 
+    | CHelp ->
       (st.message <-
       "Help info:
       While in ORGANIZATION/CHANNEL screen:
-      #create <name> : creates a new organization/channel. 
+      #create <name> : creates a new organization/channel.
       Must be unique.
-      #delete <name> : deletes an existing organization/channel. 
+      #delete <name> : deletes an existing organization/channel.
       Must be an admin.
       <existing organization name> : switches into organization/channel.
       #invite <username> <org name> : invites another user to join
@@ -258,7 +258,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
 
       While in MESSAGE screen:
       <anything not starting with #> : sends a message containing only text
-      #set_reminder <text> <time> : sets a reminder that sends a message with 
+      #set_reminder <text> <time> : sets a reminder that sends a message with
       the specified text
       after the specified amount of time has elapsed.
       #set_poll [<option1>;<option2>...] <question> : sets a poll with options
@@ -301,7 +301,7 @@ and login () =
     ANSITerminal.(print_string [Blink] "> ");
     match read_line () with
     | "exit" -> exit 0
-    | "y" -> register () 
+    | "y" -> register ()
     | _ -> login ()
 
 
@@ -334,42 +334,42 @@ and register () =
 
 (**
  * [run_app_threads st] starts up the threads necessary for the application
- * loop to function properly (each thread has access to the application 
+ * loop to function properly (each thread has access to the application
  * state [st])
  *)
 and run_app_threads st =
   let termio = Unix.tcgetattr Unix.stdin in
-  let () = Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with 
+  let () = Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with
   Unix.c_icanon = false; Unix.c_echo = false} in
   let () = ((Lwt_main.run (Lwt.pick [draw_update st; main st]))) in
-  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with 
+  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with
   Unix.c_icanon = true; Unix.c_echo = true}
 
 
 and draw_update c =
   let print_persist () =
   ANSITerminal.(print_string []
-" .d8888b.                         888 888             888 888      
-d88P  Y88b                        888 888             888 888      
-888    888                        888 888             888 888      
-888         8888b.  88888b.d88b.  888 888888  8888b.  888 888  888 
-888             88b 888  888  88b 888 888         88b 888 888 .88P 
-888    888 .d888888 888  888  888 888 888    .d888888 888 888888K  
-Y88b  d88P 888  888 888  888  888 888 Y88b.  888  888 888 888  88b 
-  Y8888P    Y888888 888  888  888 888   Y888  Y888888 888 888  888 
-                                                                   
-                                                                   
-                                                                   
-Y88b     .d8888b.   d888    d888   .d8888b.     d88P               
- Y88b   d88P  Y88b d8888   d8888  d88P  Y88b   d88P                
-  Y88b       .d88P   888     888  888    888  d88P                 
-   Y88b     8888     888     888  888    888 d88P                  
-   d88P       Y8b.   888     888  888    888 Y88b                  
-  d88P  888    888   888     888  888    888  Y88b                 
- d88P   Y88b  d88P   888     888  Y88b  d88P   Y88b                
+" .d8888b.                         888 888             888 888
+d88P  Y88b                        888 888             888 888
+888    888                        888 888             888 888
+888         8888b.  88888b.d88b.  888 888888  8888b.  888 888  888
+888             88b 888  888  88b 888 888         88b 888 888 .88P
+888    888 .d888888 888  888  888 888 888    .d888888 888 888888K
+Y88b  d88P 888  888 888  888  888 888 Y88b.  888  888 888 888  88b
+  Y8888P    Y888888 888  888  888 888   Y888  Y888888 888 888  888
+
+
+
+Y88b     .d8888b.   d888    d888   .d8888b.     d88P
+ Y88b   d88P  Y88b d8888   d8888  d88P  Y88b   d88P
+  Y88b       .d88P   888     888  888    888  d88P
+   Y88b     8888     888     888  888    888 d88P
+   d88P       Y8b.   888     888  888    888 Y88b
+  d88P  888    888   888     888  888    888  Y88b
+ d88P   Y88b  d88P   888     888  Y88b  d88P   Y88b
 d88P      Y8888P   8888888 8888888  Y8888P      Y88b   \n\n\n\n\n\n\n"
   );
-  ANSITerminal.(print_string [magenta] 
+  ANSITerminal.(print_string [magenta]
   ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"^
   (c.message)
   ^"\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"))
@@ -382,9 +382,9 @@ d88P      Y8888P   8888888 8888888  Y8888P      Y88b   \n\n\n\n\n\n\n"
         let response_json = snd (get_user_organizations c.current_user) in
         (ANSITerminal.(erase Above);
         ANSITerminal.(move_cursor (-100) 0);
-        print_persist (); 
+        print_persist ();
         render_organizations_list response_json;
-        ANSITerminal.(print_string [] (String.concat "" (List.rev 
+        ANSITerminal.(print_string [] (String.concat "" (List.rev
         !current_input_stack)));
         flush_all ();
         draw_update c)
@@ -398,8 +398,8 @@ d88P      Y8888P   8888888 8888888  Y8888P      Y88b   \n\n\n\n\n\n\n"
           (ANSITerminal.(erase Above);
           ANSITerminal.(move_cursor (-100) 0);
           print_persist ();
-          render_channels_list o response_json;    
-          ANSITerminal.(print_string [] (String.concat "" 
+          render_channels_list o response_json;
+          ANSITerminal.(print_string [] (String.concat ""
           (List.rev !current_input_stack)));
           flush_all ();
           draw_update c)
@@ -415,9 +415,9 @@ d88P      Y8888P   8888888 8888888  Y8888P      Y88b   \n\n\n\n\n\n\n"
           | Some ch ->
             let response_json = snd (get_messages c.current_user ch o 0) in
             (ANSITerminal.(erase Above);
-            ANSITerminal.(move_cursor (-100) 0);            
+            ANSITerminal.(move_cursor (-100) 0);
             render_channel_messages response_json;
-            ANSITerminal.(print_string [] (String.concat "" (List.rev 
+            ANSITerminal.(print_string [] (String.concat "" (List.rev
             !current_input_stack)));
             flush_all ();
             draw_update c)
@@ -465,6 +465,6 @@ MMMM         MMMM           MMMM           MM
   	"\nType \"login\" to Log in, or \"register\" to Register\n");
   ANSITerminal.(print_string [Blink] "> ");
   (let termio = Unix.tcgetattr Unix.stdin in
-  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true; 
+  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true;
   Unix.c_echo = true;});
   if (read_line ()) = "login" then login () else register ()
