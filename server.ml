@@ -66,7 +66,7 @@ let serialize_message m =
     | ReminderMessage (c,timestamp) -> "reminder"
     | PollMessage (c, options_list) -> "poll"
   in
-  "{\"message\":\"" ^ message_json_string ^ "\"," ^ "\"message_type\":\"" ^ 
+  "{\"message\":" ^ message_json_string ^ "," ^ "\"message_type\":\"" ^ 
   message_type ^ "\"," ^ "\"user_id\":\"" ^ m.user_id ^ "\"," ^ 
   "\"time_stamp\":\"" ^ (string_of_int m.timestamp) ^ "\"}"
 

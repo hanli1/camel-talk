@@ -22,21 +22,26 @@ type get_response = {
 } *)
 
 let login_user usern passw = 
-  let resp = Client.post (Uri.of_string "http://localhost:8000/login_user") 
-  ~body:(`String 
-  	(
-  	Yojson.Basic.to_string 
-  	(`Assoc [("user_id", `String usern);("password", `String passw)])
+  let resp = Client.post (Uri.of_string "http://127.0.0.1:8000/login_user") 
+  ~body: (
+    `String (
+    	 Yojson.Basic.to_string 
+    	 (`Assoc [("user_id", `String usern);("password", `String passw)])
     )
-  ) in
-  let defresp = resp >>= (fun (_,body) ->
-  body |> Cohttp_lwt_body.to_string >>=
-  (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  )
   in
-  {status = 
-  defresp |> Yojson.Basic.Util.member "status" |> Yojson.Basic.Util.to_string;
-  message = 
-  defresp |> Yojson.Basic.Util.member "message" |> Yojson.Basic.Util.to_string}
+  let defresp = resp >>= (fun (_,body) -> body |> Cohttp_lwt_body.to_string >>=
+    (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  in
+  {
+    status = 
+      defresp 
+      |> Yojson.Basic.Util.member "status" 
+      |> Yojson.Basic.Util.to_string;
+    message = 
+      defresp 
+      |> Yojson.Basic.Util.member "message" 
+      |> Yojson.Basic.Util.to_string}
 (*    >>=
   }
   (fun j -> j |> Yojson.Basic.Util.member "status" |> return) >>=
@@ -45,171 +50,196 @@ let login_user usern passw =
   {status = defresp ; message = ""} (*handle response error message*) *)
 
 let register_user usern passw =   
-  let resp = Client.post (Uri.of_string "http://localhost:8000/register_user") 
-  ~body:(`String 
-  	(
-  	Yojson.Basic.to_string 
-  	(`Assoc [("user_id", `String usern);("password", `String passw)])
+  let resp = Client.post (Uri.of_string "http://127.0.0.1:8000/register_user") 
+  ~body: (
+    `String (
+  	   Yojson.Basic.to_string 
+  	   (`Assoc [("user_id", `String usern);("password", `String passw)])
     )
-  ) in
-  let defresp = resp >>= (fun (_,body) ->
-  body |> Cohttp_lwt_body.to_string >>=
-  (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  )
   in
-  {status = 
-  defresp |> Yojson.Basic.Util.member "status" |> Yojson.Basic.Util.to_string;
-  message = 
-  defresp |> Yojson.Basic.Util.member "message" |> Yojson.Basic.Util.to_string}
+  let defresp = resp >>= (fun (_,body) -> body |> Cohttp_lwt_body.to_string >>=
+    (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  in
+  {
+    status = 
+      defresp
+      |> Yojson.Basic.Util.member "status"
+      |> Yojson.Basic.Util.to_string;
+    message = 
+      defresp 
+      |> Yojson.Basic.Util.member "message" 
+      |> Yojson.Basic.Util.to_string
+  }
 
 let send_message_simple usern chanid orgid jmessage =   
   let _ = Client.post 
-  (Uri.of_string "http://localhost:8000/send_message_simple") 
-  ~body:(`String 
-  	(
-  	Yojson.Basic.to_string 
-  	(`Assoc [("user_id", `String usern);("channel_id", `String chanid);
-  	("organization_id", `String orgid);("message_type", `String "simple"); 
-    ("message", jmessage)])
+  (Uri.of_string "http://127.0.0.1:8000/send_message") 
+  ~body: (
+    `String (
+  	   Yojson.Basic.to_string 
+  	   (`Assoc [("user_id", `String usern);("channel_id", `String chanid);
+  	   ("organization_id", `String orgid);("message_type", `String "simple"); 
+       ("message", jmessage)])
     )
   )
  in ()
 
 let send_message_poll usern chanid orgid jmessage =
   let _ = Client.post 
-  (Uri.of_string "http://localhost:8000/send_message_poll") 
-  ~body:(`String 
-  	(
-  	Yojson.Basic.to_string 
-  	(`Assoc [("user_id", `String usern);("channel_id", `String chanid);
-  	("organization_id", `String orgid);("message_type", `String "poll"); 
-  	("message", jmessage)])
+  (Uri.of_string "http://127.0.0.1:8000/send_message") 
+  ~body: (
+    `String (
+  	   Yojson.Basic.to_string 
+  	   (`Assoc [("user_id", `String usern);("channel_id", `String chanid);
+  	   ("organization_id", `String orgid);("message_type", `String "poll"); 
+  	   ("message", jmessage)])
     )
   )
  in ()
 
 let send_message_reminder usern chanid orgid jmessage =
   let _ = Client.post 
-  (Uri.of_string "http://localhost:8000/send_message_simple") 
-  ~body:(`String 
-  	(
-  	Yojson.Basic.to_string 
-  	(`Assoc [("user_id", `String usern);("channel_id", `String chanid);
-  	("organization_id", `String orgid); ("message_type", `String "reminder"); 
-    ("message", jmessage)])
+  (Uri.of_string "http://127.0.0.1:8000/send_message") 
+  ~body:(
+    `String (
+  	   Yojson.Basic.to_string 
+  	   (`Assoc [("user_id", `String usern);("channel_id", `String chanid);
+  	   ("organization_id", `String orgid); ("message_type", `String "reminder"); 
+       ("message", jmessage)])
     )
   )
  in ()
 
 let create_organization usern orgid = 
   let resp = Client.post 
-  (Uri.of_string "http://localhost:8000/create_organization") 
-  ~body:(`String 
-    (
-    Yojson.Basic.to_string 
-    (`Assoc [("user_id", `String usern);("orgname", `String orgid)])
+  (Uri.of_string "http://127.0.0.1:8000/create_organization") 
+  ~body:(
+    `String (
+      Yojson.Basic.to_string 
+      (`Assoc [("user_id", `String usern);("organization_id", `String orgid)])
     )
-  ) in
-  let defresp = resp >>= (fun (_,body) ->
-  body |> Cohttp_lwt_body.to_string >>=
-  (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  )
   in
-  {status = 
-  defresp |> Yojson.Basic.Util.member "status" |> Yojson.Basic.Util.to_string;
-  message = 
-  defresp |> Yojson.Basic.Util.member "message" |> Yojson.Basic.Util.to_string}
+  let defresp = resp >>= (fun (_,body) -> body |> Cohttp_lwt_body.to_string >>=
+    (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  in {
+    status = 
+      defresp
+      |> Yojson.Basic.Util.member "status"
+      |> Yojson.Basic.Util.to_string;
+    message = 
+      defresp
+      |> Yojson.Basic.Util.member "message"
+      |> Yojson.Basic.Util.to_string
+  }
 
 let delete_organization usern orgid = 
   let resp = Client.post 
-  (Uri.of_string "http://localhost:8000/delete_organization") 
-  ~body:(`String 
-    (
-    Yojson.Basic.to_string 
-    (`Assoc [("user_id", `String usern);("orgname", `String orgid)])
+  (Uri.of_string "http://127.0.0.1:8000/delete_organization") 
+  ~body:(
+    `String (
+      Yojson.Basic.to_string 
+      (`Assoc [("user_id", `String usern);("organization_id", `String orgid)])
     )
-  ) in
-  let defresp = resp >>= (fun (_,body) ->
-  body |> Cohttp_lwt_body.to_string >>=
-  (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  )
   in
-  {status = 
-  defresp |> Yojson.Basic.Util.member "status" |> Yojson.Basic.Util.to_string;
-  message = 
-  defresp |> Yojson.Basic.Util.member "message" |> Yojson.Basic.Util.to_string}
+  let defresp = resp >>= (fun (_,body) -> body |> Cohttp_lwt_body.to_string >>=
+    (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  in
+  {
+    status = 
+      defresp
+      |> Yojson.Basic.Util.member "status"
+      |> Yojson.Basic.Util.to_string;
+    message = 
+      defresp
+      |> Yojson.Basic.Util.member "message"
+      |> Yojson.Basic.Util.to_string
+  }
 
 let create_channel usern orgid chanid = 
   let resp = Client.post 
-  (Uri.of_string "http://localhost:8000/create_channel") 
-  ~body:(`String 
-    (
-    Yojson.Basic.to_string 
-    (`Assoc [("user_id", `String usern);("organization_id", `String orgid);
+    (Uri.of_string "http://127.0.0.1:8000/create_channel") 
+  ~body: (
+    `String (
+      Yojson.Basic.to_string 
+      (`Assoc [("user_id", `String usern);("organization_id", `String orgid);
       ("channel_id", `String chanid)])
     )
-  ) in
-  let defresp = resp >>= (fun (_,body) ->
-  body |> Cohttp_lwt_body.to_string >>=
-  (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  )
   in
-  {status = 
-  defresp |> Yojson.Basic.Util.member "status" |> Yojson.Basic.Util.to_string;
-  message = 
-  defresp |> Yojson.Basic.Util.member "message" |> Yojson.Basic.Util.to_string}
+  let defresp = resp >>= (fun (_,body) -> body |> Cohttp_lwt_body.to_string >>=
+    (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  in {
+    status = 
+      defresp
+      |> Yojson.Basic.Util.member "status"
+      |> Yojson.Basic.Util.to_string;
+    message = 
+      defresp
+      |> Yojson.Basic.Util.member "message"
+      |> Yojson.Basic.Util.to_string
+  }
 
 let delete_channel usern orgid chanid = 
   let resp = Client.post 
-  (Uri.of_string "http://localhost:8000/delete_channel") 
-  ~body:(`String 
-    (
-    Yojson.Basic.to_string 
-    (`Assoc [("user_id", `String usern);("organization_id", `String orgid);
+  (Uri.of_string "http://127.0.0.1:8000/delete_channel") 
+  ~body:(
+    `String (
+      Yojson.Basic.to_string 
+      (`Assoc [("user_id", `String usern);("organization_id", `String orgid);
       ("channel_id", `String chanid)])
     )
-  ) in
-  let defresp = resp >>= (fun (_,body) ->
-  body |> Cohttp_lwt_body.to_string >>=
-  (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  )
   in
-  {status = 
-  defresp |> Yojson.Basic.Util.member "status" |> Yojson.Basic.Util.to_string;
-  message = 
-  defresp |> Yojson.Basic.Util.member "message" |> Yojson.Basic.Util.to_string}
+  let defresp = resp >>= (fun (_,body) -> body |> Cohttp_lwt_body.to_string >>=
+    (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  in {
+    status = 
+      defresp
+      |> Yojson.Basic.Util.member "status"
+      |> Yojson.Basic.Util.to_string;
+    message = 
+      defresp
+      |> Yojson.Basic.Util.member "message"
+      |> Yojson.Basic.Util.to_string
+  }
 
 let get_channels usern orgid =
   let resp = Client.get (Uri.of_string 
-    ("http://localhost:8000/get_channels?"^"user_id="^
+    ("http://127.0.0.1:8000/get_channels?"^"user_id="^
       usern^"&organization_id="^orgid))
   in
   let resp_json = resp >>= (fun (_,body) ->
-  body |> Cohttp_lwt_body.to_string >>=
-  (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
-  in 
-  ((resp_json |> Yojson.Basic.Util.member "status" 
-  |> Yojson.Basic.Util.to_string),
-  resp_json)
+    body |> Cohttp_lwt_body.to_string >>=
+    (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run in 
+    ((resp_json |> Yojson.Basic.Util.member "status" 
+    |> Yojson.Basic.Util.to_string), resp_json)
 
 let get_messages usern chanid orgid start_index = 
   let resp = Client.get (Uri.of_string 
-    ("http://localhost:8000/get_messages?"^"user_id="^usern
+    ("http://127.0.0.1:8000/get_messages?"^"user_id="^usern
       ^"&channel_id="^chanid
       ^"&organization_id="^orgid
       ^"&start_index="^(string_of_int start_index)))
   in
   let resp_json = resp >>= (fun (_,body) ->
   body |> Cohttp_lwt_body.to_string >>=
-  (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
-  in 
-  ((resp_json |> Yojson.Basic.Util.member "status"
-  |> Yojson.Basic.Util.to_string),
-  resp_json)
+    (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+    in 
+    ((resp_json |> Yojson.Basic.Util.member "status"
+    |> Yojson.Basic.Util.to_string),
+    resp_json)
 
 let get_user_organizations usern =
   let resp = Client.get (Uri.of_string 
-    ("http://localhost:8000/get_user_organizations?"^"user_id="^usern))
+    ("http://127.0.0.1:8000/get_user_organizations?"^"user_id="^usern))
   in
   let resp_json = resp >>= (fun (_,body) ->
   body |> Cohttp_lwt_body.to_string >>=
-  (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
-  in 
-  ((resp_json |> Yojson.Basic.Util.member "status"
-  |> Yojson.Basic.Util.to_string),
-  resp_json)
+    (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+    in 
+    ((resp_json |> Yojson.Basic.Util.member "status"
+    |> Yojson.Basic.Util.to_string),
+    resp_json)

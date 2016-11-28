@@ -84,13 +84,15 @@ let render_channels_list curr_org resp_obj =
   print_newline();
   ANSITerminal.(print_string [green] ("Private Channels -> "));
   render_channels_list_helper (get_member_list_of_string resp_obj "private_channels");
-  print_newline()
+  print_newline();
+  flush_all ()
 
 let render_organizations_list resp_obj =
   ANSITerminal.(print_string [blue] ("Organizations list: "));
   print_newline();
   render_channels_list_helper (get_member_list_of_string resp_obj "organizations");
-  print_newline()
+  print_newline();
+  flush_all ()
 
 
 let rec print_votes lst =
@@ -113,11 +115,11 @@ let set_and_print x y styles text =
   (* ANSITerminal.restore_cursor() *)
 
 let print_meta_data name time =
-  let divider = "—" in
+  let divider = "─" in
   print_across_screen divider;
   ANSITerminal.(print_string [green] ("| "^name));
   let time_length = String.length time in
-  set_and_print (get_width() - time_length - 1) (cursor_y()) [] (time ^ " |");
+  set_and_print (get_width() - time_length - 1) (get_height()) [] (time ^ " |");
   print_across_screen divider
 
 
@@ -129,20 +131,20 @@ let render_message msg =
   let mess = msg |> member "message" in
   if msg_type = "simple" then begin
     print_meta_data user_id time_stamp;
-    ANSITerminal.(print_string [] (get_member_string mess "text"));
-    (* print_linebreak () *)
+    ANSITerminal.(print_string [] (get_member_string mess "content"));
+    print_newline ()
   end
   else if msg_type = "reminder" then begin
     print_meta_data user_id time_stamp;
-    ANSITerminal.(print_string [] ("Reminder set for " ^ (get_member_string mess "reminder")));
-    (* print_linebreak () *)
+    ANSITerminal.(print_string [] ("Reminder set for " ^ (get_member_string mess "content") ^" for " ^ (get_member_string mess "time")));
+    print_newline ()
   end
   else begin
     print_meta_data user_id time_stamp;
-    ANSITerminal.(print_string [] (get_member_string mess "pollname"));
+    ANSITerminal.(print_string [] (get_member_string mess "content"));
     print_newline ();
-    print_votes (get_member_list mess "choices");
-    (* print_linebreak () *)
+    print_votes (get_member_list mess "options");
+    print_newline ()
   end
 
 let rec render_channel_messages_helper lst =
@@ -151,6 +153,8 @@ let rec render_channel_messages_helper lst =
   | h::t -> render_message h; render_channel_messages_helper t
 
 let render_channel_messages resp_obj =
-  render_channel_messages_helper (json_to_list resp_obj)
+  let open Yojson.Basic.Util in
+  render_channel_messages_helper (json_to_list (resp_obj |> member "messages"));
+  flush_all ()
 
 

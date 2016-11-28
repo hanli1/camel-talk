@@ -5,8 +5,7 @@ open Lwt
  * The current_state type contains the particular organization/channel
  * as well as the user id.
  *)
-type current_state =
-{
+type current_state = {
   mutable current_org : string option;
   mutable current_channel : string option;
   mutable current_user : string;
@@ -35,4 +34,4 @@ val register : unit -> unit
 (*
  * Contains the REPL
  *)
-val main : current_state -> unit
+val main : current_state -> unit Lwt.t
