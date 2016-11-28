@@ -22,7 +22,7 @@ type get_response = {
 } *)
 
 let login_user usern passw = 
-  let resp = Client.post (Uri.of_string "http://127.0.0.1:8000/login_user") 
+  let resp = Client.post (Uri.of_string "http://localhost:8000/login_user") 
   ~body: (
     `String (
     	 Yojson.Basic.to_string 
@@ -50,7 +50,7 @@ let login_user usern passw =
   {status = defresp ; message = ""} (*handle response error message*) *)
 
 let register_user usern passw =   
-  let resp = Client.post (Uri.of_string "http://127.0.0.1:8000/register_user") 
+  let resp = Client.post (Uri.of_string "http://localhost:8000/register_user") 
   ~body: (
     `String (
   	   Yojson.Basic.to_string 
@@ -74,7 +74,7 @@ let register_user usern passw =
 
 let send_message_simple usern chanid orgid jmessage =   
   let _ = Client.post 
-  (Uri.of_string "http://127.0.0.1:8000/send_message") 
+  (Uri.of_string "http://localhost:8000/send_message") 
   ~body: (
     `String (
   	   Yojson.Basic.to_string 
@@ -87,7 +87,7 @@ let send_message_simple usern chanid orgid jmessage =
 
 let send_message_poll usern chanid orgid jmessage =
   let _ = Client.post 
-  (Uri.of_string "http://127.0.0.1:8000/send_message") 
+  (Uri.of_string "http://localhost:8000/send_message") 
   ~body: (
     `String (
   	   Yojson.Basic.to_string 
@@ -100,7 +100,7 @@ let send_message_poll usern chanid orgid jmessage =
 
 let send_message_reminder usern chanid orgid jmessage =
   let _ = Client.post 
-  (Uri.of_string "http://127.0.0.1:8000/send_message") 
+  (Uri.of_string "http://localhost:8000/send_message") 
   ~body:(
     `String (
   	   Yojson.Basic.to_string 
@@ -113,7 +113,7 @@ let send_message_reminder usern chanid orgid jmessage =
 
 let create_organization usern orgid = 
   let resp = Client.post 
-  (Uri.of_string "http://127.0.0.1:8000/create_organization") 
+  (Uri.of_string "http://localhost:8000/create_organization") 
   ~body:(
     `String (
       Yojson.Basic.to_string 
@@ -136,7 +136,7 @@ let create_organization usern orgid =
 
 let delete_organization usern orgid = 
   let resp = Client.post 
-  (Uri.of_string "http://127.0.0.1:8000/delete_organization") 
+  (Uri.of_string "http://localhost:8000/delete_organization") 
   ~body:(
     `String (
       Yojson.Basic.to_string 
@@ -160,7 +160,7 @@ let delete_organization usern orgid =
 
 let create_channel usern orgid chanid = 
   let resp = Client.post 
-    (Uri.of_string "http://127.0.0.1:8000/create_channel") 
+    (Uri.of_string "http://localhost:8000/create_channel") 
   ~body: (
     `String (
       Yojson.Basic.to_string 
@@ -184,7 +184,7 @@ let create_channel usern orgid chanid =
 
 let delete_channel usern orgid chanid = 
   let resp = Client.post 
-  (Uri.of_string "http://127.0.0.1:8000/delete_channel") 
+  (Uri.of_string "http://localhost:8000/delete_channel") 
   ~body:(
     `String (
       Yojson.Basic.to_string 
@@ -208,7 +208,7 @@ let delete_channel usern orgid chanid =
 
 let get_channels usern orgid =
   let resp = Client.get (Uri.of_string 
-    ("http://127.0.0.1:8000/get_channels?"^"user_id="^
+    ("http://localhost:8000/get_channels?"^"user_id="^
       usern^"&organization_id="^orgid))
   in
   let resp_json = resp >>= (fun (_,body) ->
@@ -219,7 +219,7 @@ let get_channels usern orgid =
 
 let get_messages usern chanid orgid start_index = 
   let resp = Client.get (Uri.of_string 
-    ("http://127.0.0.1:8000/get_messages?"^"user_id="^usern
+    ("http://localhost:8000/get_messages?"^"user_id="^usern
       ^"&channel_id="^chanid
       ^"&organization_id="^orgid
       ^"&start_index="^(string_of_int start_index)))
@@ -234,7 +234,7 @@ let get_messages usern chanid orgid start_index =
 
 let get_user_organizations usern =
   let resp = Client.get (Uri.of_string 
-    ("http://127.0.0.1:8000/get_user_organizations?"^"user_id="^usern))
+    ("http://localhost:8000/get_user_organizations?"^"user_id="^usern))
   in
   let resp_json = resp >>= (fun (_,body) ->
   body |> Cohttp_lwt_body.to_string >>=

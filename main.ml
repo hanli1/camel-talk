@@ -30,7 +30,9 @@ let current_input_stack = ref []
  * with JSON strings 
  *)
 let escape_char c =
-  if c = '\'' then
+  if c = '\\' then
+    "\\"
+  else if c = '\'' then
    "'"
   else if c = '\\' then
    "\\"
@@ -42,7 +44,9 @@ let escape_char c =
  * JSON strings
  *)
 let escape_str s =
-  if s = "\"" then
+  if s = "\\" then
+    "\\\\"
+  else if s = "\"" then
     "\\\""
   else if s = "\\'" then
     "'"
@@ -295,14 +299,14 @@ and run_app_threads st =
 
 and draw_update c =
   Lwt_unix.sleep 0.1 >>= (fun () ->
-  ANSITerminal.(erase Above);
-  ANSITerminal.(move_cursor (-100) 0);  
   match c.current_screen with
   | Organizations ->
       if c.logged_out then Lwt.return ()
       else
-        (render_organizations_list
-        (snd (get_user_organizations c.current_user));
+        let response_json = snd (get_user_organizations c.current_user) in
+        (ANSITerminal.(erase Above);
+        ANSITerminal.(move_cursor (-100) 0);  
+        render_organizations_list response_json;
         ANSITerminal.(print_string [] (String.concat "" (List.rev 
         !current_input_stack)));
         flush_all ();
@@ -312,12 +316,15 @@ and draw_update c =
       else (
         match c.current_org with
         | None -> failwith "shouldn't happen"
-        | Some o -> 
-            (render_channels_list o (snd (get_channels c.current_user o));
-            ANSITerminal.(print_string [] (String.concat "" 
-            (List.rev !current_input_stack)));
-            flush_all ();
-            draw_update c)
+        | Some o ->
+          let response_json = snd (get_channels c.current_user o) in
+          (ANSITerminal.(erase Above);
+          ANSITerminal.(move_cursor (-100) 0);
+          render_channels_list o response_json;    
+          ANSITerminal.(print_string [] (String.concat "" 
+          (List.rev !current_input_stack)));
+          flush_all ();
+          draw_update c)
       )
   | Messages ->
       if c.logged_out then Lwt.return ()
@@ -327,13 +334,15 @@ and draw_update c =
         | Some o -> (
           match c.current_channel with
           | None -> failwith "shouldn't happen"
-          | Some ch -> 
-              (render_channel_messages (snd (get_messages c.current_user 
-              ch o 0));
-              ANSITerminal.(print_string [] (String.concat "" (List.rev 
-              !current_input_stack)));
-              flush_all ();
-              draw_update c)
+          | Some ch ->
+            let response_json = snd (get_messages c.current_user ch o 0) in
+            (ANSITerminal.(erase Above);
+            ANSITerminal.(move_cursor (-100) 0);            
+            render_channel_messages response_json;
+            ANSITerminal.(print_string [] (String.concat "" (List.rev 
+            !current_input_stack)));
+            flush_all ();
+            draw_update c)
         )
       )
   )
