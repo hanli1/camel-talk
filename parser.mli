@@ -32,7 +32,7 @@ type command =
   | CInvite of string * string
   | CScrollUp
   | CScrollDown
-  | CLeave of string
+  | CLeave of string * string
   | CVote of string * string
 
 type screen =

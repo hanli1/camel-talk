@@ -15,7 +15,7 @@ type command =
   | CInvite of string * string
   | CScrollUp
   | CScrollDown
-  | CLeave of string
+  | CLeave of string * string
   | CVote of string * string
 
 type screen =
@@ -86,7 +86,11 @@ let parse_organizations_screen str =
     if h <> "" && t <> "" then CInvite (h, t)
     else CIllegal
   end
-  else if keyword = "#leave" then if text <> "" then CLeave text else CIllegal
+  else if keyword = "#leave" then begin
+    let (h, t) = parse_string text in
+    if h <> "" && t <> "" then CLeave (h, t)
+    else CIllegal
+  end
   else CSwitch str
 
 
