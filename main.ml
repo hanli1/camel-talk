@@ -117,7 +117,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         match st.current_org with
         | None -> failwith "shouldn't happen"
         | Some o ->
-          let resp = Client.delete_channel st.current_user s o in
+          let resp = Client.delete_channel st.current_user o s in
           (st.message <- resp.message);
           (
             match resp.status with

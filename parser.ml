@@ -97,7 +97,8 @@ let parse_organizations_screen str =
 
 (** text_to_message [cmd] is a command representing that message. *)
 let text_to_message str screen=
-  if str = "#back" then CBack
+  if String.trim str = "" then CIllegal
+  else if str = "#back" then CBack
   else if str = "#help" then CHelp
   else if str = "#logout" then CLogout
   else if str = "#scrollup" then CScrollUp
