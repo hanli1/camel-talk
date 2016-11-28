@@ -1,3 +1,4 @@
+open Unix
 
 let json_to_list json =
   let open Yojson.Basic.Util in
@@ -115,12 +116,15 @@ let set_and_print x y styles text =
   (* ANSITerminal.restore_cursor() *)
 
 let print_meta_data name time =
+  let date_rec = Unix.localtime (float_of_string time) in
+  let time = string_of_int (date_rec.tm_mon +1) ^ "/" ^ string_of_int date_rec.tm_mday ^ "/" ^ string_of_int (date_rec.tm_year+1900)
+    ^ " " ^ string_of_int date_rec.tm_hour ^ ":"^ string_of_int date_rec.tm_min ^ ":" ^ string_of_int date_rec.tm_sec in
   let divider = "─" in
   print_across_screen divider;
   ANSITerminal.(print_string [green] ("| "^name));
   let time_length = String.length time in
-  set_and_print (get_width() - time_length - 1) (get_height()) [] (time ^ " |");
-  print_across_screen divider
+  set_and_print (get_width() - time_length - 1) (get_height()) [] (time ^ " |")
+  (* print_across_screen divider *)
 
 
 let render_message msg =
