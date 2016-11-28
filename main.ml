@@ -25,6 +25,7 @@ type command =
   | CHelp
   | CIllegal
   | CLogout
+  | CQuit
   | CInvite of string * string
   | CScrollUp
   | CScrollDown
@@ -141,10 +142,10 @@ let rec main (st : current_state) : (unit Lwt.t) =
           let resp = Client.get_channels st.current_user s in
           match (fst resp) with
           | "failure" -> (
-            (st.message <- "Not a valid switch"); main st
+            (st.message <- "Not a valid command"); main st
           )
           | "success" -> (
-            (st.message <- ("Switched into "^s));
+            (st.message <- ("Switched into organization \""^s^"\""));
             st.current_org <- Some s;
             st.current_screen <- Channels;
             main st
@@ -161,7 +162,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
             (st.message <- "Not a valid switch"); main st
           )
           | "success" -> (
-            (st.message <- ("Switched into "^o));
+            (st.message <- ("Switched into channel \""^s^"\""));
             st.current_channel <- Some s;
             st.current_screen <- Messages;
             main st
@@ -231,6 +232,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         main st
     )
     | CLogout -> Lwt.return ()
+    | CQuit -> st.message <- "Goodbye"; Lwt_unix.sleep 0.1 >>= (fun () -> exit 0)
     | CInvite (user_to_join, orgid) -> (
       let resp = invite user_to_join orgid st.current_user in
       (st.message <- resp.message); main st
@@ -254,7 +256,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
       the specified organization. (only for organization screen)
       #leave <username> <organization name> : kicks out the user from the
       specified organization. (only for organization screen)
-      #logout : logs out
+      #logout : logs out, #quit : quits the application
       #back : goes out of channel screen into the organization screen
 
       While in MESSAGE screen:
@@ -266,7 +268,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
       that other users of the channel can vote on.
       #vote <pollname> <optionname> : votes on an option from an existing poll.
       #scrollup, #scrolldown: scrolls the message list up or down respectively.
-      #back, #logout: same as above."
+      #back, #logout, #quit: same as above."
       ); main st
     | _ -> failwith "unimplemented command"
     )
@@ -360,7 +362,6 @@ Y88b  d88P 888  888 888  888  888 888 Y88b.  888  888 888 888  88b
   Y8888P    Y888888 888  888  888 888   Y888  Y888888 888 888  888
 
 
-
 Y88b     .d8888b.   d888    d888   .d8888b.     d88P
  Y88b   d88P  Y88b d8888   d8888  d88P  Y88b   d88P
   Y88b       .d88P   888     888  888    888  d88P
@@ -368,7 +369,19 @@ Y88b     .d8888b.   d888    d888   .d8888b.     d88P
    d88P       Y8b.   888     888  888    888 Y88b
   d88P  888    888   888     888  888    888  Y88b
  d88P   Y88b  d88P   888     888  Y88b  d88P   Y88b
-d88P      Y8888P   8888888 8888888  Y8888P      Y88b   \n\n\n\n\n\n\n"
+d88P      Y8888P   8888888 8888888  Y8888P      Y88b   
+                                                        =--_
+                                         .-______-.     |  _)
+                                        /          |    /
+                                       /            |_/  /
+           _                          /|                /
+       _-'                                 ____    _.             _
+    _-'   (  '-_            _       (   |  ||  /|  ||           .-'..
+_.-'       '.   `'-._   .-' '.         | |/ /  | |/        _-   (   ' _
+             '.      _    (   '-_       | | /   | |     _.-'       )      _
+           _.'   _. '       )     -._    ||ll   |ll  ' '        . '
+         '               . '          `'  ll   ll))
+_____  _  ___  _ ____________ _____  ___ _ll _l  _l  _______________  ___   _"
   );
   ANSITerminal.(print_string [magenta]
   ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"^
@@ -414,9 +427,15 @@ d88P      Y8888P   8888888 8888888  Y8888P      Y88b   \n\n\n\n\n\n\n"
           match c.current_channel with
           | None -> failwith "shouldn't happen"
           | Some ch ->
-            let response_json = snd (get_messages c.current_user ch o 0) in
+            let response_json = 
+            snd (get_messages c.current_user ch o c.current_line) in
             (ANSITerminal.(erase Above);
             ANSITerminal.(move_cursor (-100) 0);
+            ANSITerminal.(print_string [magenta]
+            ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"^
+            (c.message)^
+            "\nCurrent organization: "^o^" | Current channel: "^ch
+            ^"\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"));
             render_channel_messages response_json;
             ANSITerminal.(print_string [] (String.concat "" (List.rev
             !current_input_stack)));
@@ -464,7 +483,7 @@ MMMM         MMMM           MMMM           MM
   	"Would you like to log in or register?");
   ANSITerminal.(print_string [Bold; blue]
   	"\nType \"login\" to Log in, or \"register\" to Register\n");
-  ANSITerminal.(print_string [Blink] "> ");
+  ANSITerminal.(print_string [] "> ");
   (let termio = Unix.tcgetattr Unix.stdin in
   Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true;
   Unix.c_echo = true;});

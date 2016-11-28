@@ -29,6 +29,7 @@ type command =
   | CBack
   | CIllegal
   | CLogout
+  | CQuit
   | CInvite of string * string
   | CScrollUp
   | CScrollDown
