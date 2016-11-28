@@ -210,7 +210,8 @@ let rec main (st : current_state) : (unit Lwt.t) =
           | Some c -> send_message_poll st.current_user c o
             (`Assoc [
               ("content", `String s);
-              ("option", `List (List.map (fun x -> `String x) xs))
+              ("options", `List (List.map (fun x -> `Assoc [("option", 
+              `String x); ("count", `Int 0)]) xs))
             ]);
             main st
         )
@@ -261,7 +262,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
       #set_reminder <text> <time> : sets a reminder that sends a message with
       the specified text
       after the specified amount of time has elapsed.
-      #set_poll [<option1>;<option2>...] <question> : sets a poll with options
+      #set_poll [<option1>,<option2>...] <question> : sets a poll with options
       that other users of the channel can vote on.
       #vote <pollname> <optionname> : votes on an option from an existing poll.
       #scrollup, #scrolldown: scrolls the message list up or down respectively.

@@ -38,7 +38,7 @@ let parse_string str =
     end
 
 let parse_string_to_list str =
-  Str.split (Str.regexp ", ") str
+  Str.split (Str.regexp ",") str
 
 let parse_message_string str =
   try
