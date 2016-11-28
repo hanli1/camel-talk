@@ -23,7 +23,31 @@ type command =
   | CIllegal
   | CLogout
 
-let current_input = ref ""                            
+let current_input_stack = ref []                            
+
+(**
+ * [escape_char c] escapes the character [c] and provides compatibility
+ * with JSON strings 
+ *)
+let escape_char c =
+  if c = '\'' then
+   "'"
+  else if c = '\\' then
+   "\\"
+  else
+    Char.escaped c
+
+(**
+ * [escape_str s] escapes the string [s] and provides compatibility with
+ * JSON strings
+ *)
+let escape_str s =
+  if s = "\"" then
+    "\\\""
+  else if s = "\\'" then
+    "'"
+  else
+     s
 
 let rec main (st : current_state) : (unit Lwt.t) =
 	Lwt_io.read_char (Lwt_io.stdin) >>=
@@ -31,18 +55,18 @@ let rec main (st : current_state) : (unit Lwt.t) =
   fun c ->
   (
   if c = '\127' then
-    if !current_input <> "" then
-      let current_input_length = String.length !current_input - 1 in
-      (current_input := String.sub !current_input 0 current_input_length;
+    match !current_input_stack with
+    | [] -> main st
+    | h::t ->
+      (current_input_stack := t;
       main st)
-    else
-      main st
   else if c != '\n' then
-    (current_input := !current_input ^ (Char.escaped c);
+    (current_input_stack := (escape_char c)::!current_input_stack;
     main st)
   else
-    let s = !current_input in
-    let () = (current_input := "") in
+    let input_stack = List.map escape_str !current_input_stack in
+    let s = String.concat "" (List.rev input_stack) in
+    let () = (current_input_stack := []) in
     match text_to_message s st.current_screen with (*doesn't perform repainting*)
     | CIllegal ->
     	(ANSITerminal.(print_string [Bold; blue] "Illegal command"); main st)
@@ -279,7 +303,8 @@ and draw_update c =
       else
         (render_organizations_list
         (snd (get_user_organizations c.current_user));
-        ANSITerminal.(print_string [black] (!current_input));
+        ANSITerminal.(print_string [] (String.concat "" (List.rev 
+        !current_input_stack)));
         flush_all ();
         draw_update c)
   | Channels ->
@@ -289,7 +314,8 @@ and draw_update c =
         | None -> failwith "shouldn't happen"
         | Some o -> 
             (render_channels_list o (snd (get_channels c.current_user o));
-            ANSITerminal.(print_string [black] (!current_input));
+            ANSITerminal.(print_string [] (String.concat "" 
+            (List.rev !current_input_stack)));
             flush_all ();
             draw_update c)
       )
@@ -304,7 +330,8 @@ and draw_update c =
           | Some ch -> 
               (render_channel_messages (snd (get_messages c.current_user 
               ch o 0));
-              ANSITerminal.(print_string [black] (!current_input));
+              ANSITerminal.(print_string [] (String.concat "" (List.rev 
+              !current_input_stack)));
               flush_all ();
               draw_update c)
         )
