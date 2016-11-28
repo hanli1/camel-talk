@@ -71,7 +71,7 @@ let print_newline _ =
  *)
 let rec render_channels_list_helper channels_lst=
   match channels_lst with
-  | [] -> ()
+  | [] -> ANSITerminal.(print_string [green] ("No channels of this type"));
   | h::[] -> ANSITerminal.(print_string [green] (" | " ^ h ^ " | "));
   | h::t ->
   ANSITerminal.(print_string [green] (" | " ^ h));
@@ -80,16 +80,24 @@ let rec render_channels_list_helper channels_lst=
 let render_channels_list curr_org resp_obj =
   ANSITerminal.(print_string [blue] ("Current organization: " ^ curr_org));
   print_newline();
-  ANSITerminal.(print_string [green] ("Public Channels -> "));
+  print_across_screen "─";
+  ANSITerminal.(print_string [green] ("Public Channels"));
+  print_newline();(*
+  print_across_screen "─"; *)
   render_channels_list_helper (get_member_list_of_string resp_obj "team_channels");
   print_newline();
-  ANSITerminal.(print_string [green] ("Private Channels -> "));
+  print_across_screen "─";
+  ANSITerminal.(print_string [green] ("Private Channels"));
+  print_newline();
+  (* print_across_screen "─"; *)
   render_channels_list_helper (get_member_list_of_string resp_obj "private_channels");
   print_newline();
+  print_across_screen "─";
   flush_all ()
 
 let render_organizations_list resp_obj =
-  ANSITerminal.(print_string [blue] ("Organizations list: "));
+  print_across_screen "─";
+  ANSITerminal.(print_string [blue] ("Organizations list"));
   print_newline();
   render_channels_list_helper (get_member_list_of_string resp_obj "organizations");
   print_newline();
