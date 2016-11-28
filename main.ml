@@ -375,8 +375,6 @@ d88P      Y8888P   8888888 8888888  Y8888P      Y88b   \n\n\n\n\n\n\n"
   ^"\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"))
   in
   Lwt_unix.sleep 0.1 >>= (fun () ->
-  (* ANSITerminal.(erase Above);
-  ANSITerminal.(move_cursor (-100) 0); *)
   match c.current_screen with
   | Organizations ->
       if c.logged_out then Lwt.return ()
