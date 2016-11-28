@@ -10,7 +10,9 @@ type current_state = {
   mutable current_channel : string option;
   mutable current_user : string;
   mutable current_screen : Parser.screen;
-  mutable logged_out : bool
+  mutable logged_out : bool;
+  mutable current_line : int;
+  mutable message : string
 }
 
 (*
