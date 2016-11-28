@@ -29,6 +29,11 @@ type command =
   | CBack
   | CIllegal
   | CLogout
+  | CInvite of string * string
+  | CScrollUp
+  | CScrollDown
+  | CLeave of string
+  | CVote of string * string
 
 type screen =
   | Messages
