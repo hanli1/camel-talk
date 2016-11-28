@@ -54,15 +54,21 @@ let rec gen_line str_dup str count =
 
 let print_across_screen str_dup =
   ANSITerminal.(print_string [] (gen_line str_dup "" (get_width ())));
-  print_newline() (* WTF WHY DOES THIS LINE FIX FORMATTING??!*)
+  print_newline()
+
+let print_bottom_rectangle str_dup =
+  ANSITerminal.(print_string [] ("└"));
+  ANSITerminal.(print_string [] (gen_line str_dup "" (get_width () - 2 )));
+  ANSITerminal.(print_string [] ("┘"));
+  print_newline()
 
 (* let print_linebreak _ =
   print_newline();
   print_across_screen "_";
   print_newline() *)
 
-let print_newline _ =
-  ANSITerminal.(print_string [] "\n")
+(* let print_newline _ =
+  ANSITerminal.(print_string [] "\n") *)
 
 (* let get_current_org state =
   match state.current_org with

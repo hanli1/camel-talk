@@ -51,7 +51,14 @@ let parse_message_string str =
       let second_space_index = String.index text ' ' in
       let duration = String.sub text 0 second_space_index in
       let reminder = String.sub text (second_space_index + 1) (text_length - second_space_index - 1) in
-      CReminderMessage (reminder, (int_of_string duration))
+      try
+      let dur = int_of_string duration in
+      if reminder <> "" then
+      CReminderMessage (reminder, dur)
+      else
+      CIllegal
+      with
+      | _ -> CIllegal
     else if keyword = "#set_poll" then
       (* let left_bracket_index = String.index text '[' in *)
       let right_bracket_index = String.index text ']' in
@@ -65,22 +72,21 @@ let parse_message_string str =
     end
     else CSimpleMessage str (* default to normal message *)
   with
-  | Not_found -> CSimpleMessage str
-
+  | _ -> if String.get str 0 = '#' then CIllegal else CSimpleMessage str
 
 let parse_messages_screen str =
   parse_message_string str
 
 let parse_channels_screen str =
   let (keyword, text) = parse_string str in
-  if keyword = "#create" then CCreate text
-  else if keyword = "#delete" then CDelete text
+  if keyword = "#create" then (if text <> "" then CCreate text else CIllegal)
+  else if keyword = "#delete" then (if text <> "" then CDelete text else CIllegal)
   else CSwitch str
 
 let parse_organizations_screen str =
   let (keyword, text) = parse_string str in
-  if keyword = "#create" then CCreate text
-  else if keyword = "#delete" then CDelete text
+  if keyword = "#create" then (if text <> "" then CCreate text else CIllegal)
+  else if keyword = "#delete" then (if text <> "" then CDelete text else CIllegal)
   else if keyword = "#invite" then begin
     let (h, t) = parse_string text in
     if h <> "" && t <> "" then CInvite (h, t)
@@ -97,7 +103,8 @@ let parse_organizations_screen str =
 
 (** text_to_message [cmd] is a command representing that message. *)
 let text_to_message str screen=
-  if String.trim str = "" then CIllegal
+  let str = String.trim str in
+  if str = "" then CIllegal
   else if str = "#back" then CBack
   else if str = "#help" then CHelp
   else if str = "#logout" then CLogout
