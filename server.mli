@@ -1,6 +1,6 @@
 (**
  * request_record is a type that represents the contents of an HTTP Request
- * for an API call 
+ * for an API call
  *)
 type request_record = {
   request_info : Cohttp.Request.t;
@@ -72,3 +72,5 @@ val get_channels_api : request_record -> response_record
  * organization
  *)
 val get_messages_api : request_record -> response_record
+
+val vote_poll_api : request_record -> response_record

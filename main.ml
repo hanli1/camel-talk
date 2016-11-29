@@ -239,6 +239,13 @@ let rec main (st : current_state) : (unit Lwt.t) =
       let resp = leave user_to_leave orgid st.current_user in
       (st.message <- resp.message); main st
     )
+    | CVote (poll, choice) -> begin
+      match (st.current_org, st.current_channel) with
+      | (Some orgid, Some chanid)->
+        let resp = vote orgid chanid poll choice in
+        (st.message <- resp.message); main st
+      | (_, _)-> failwith "wtf"
+      end
     | CScrollUp -> st.current_line <- st.current_line + 10 ; main st
     | CScrollDown -> st.current_line <- st.current_line - 10 ; main st
     | CHelp ->
