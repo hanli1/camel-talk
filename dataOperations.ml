@@ -33,6 +33,7 @@ type channel_mutable = {
   messages_mut : message DynArray.t;
   mutable users_mut : string list;
   is_public_mut : bool;
+  mutable reminders_mut : (string * int) list;
 }
 
 type user_mutable = {
@@ -130,10 +131,21 @@ let read_data () : t =
 
   let add_channel fh channels =
     let channel_info = line_to_fields (input_line fh) in
-    let (name, is_public, users) =
+    let (name, is_public, users, reminders) =
       match channel_info with
-      | n::p::us::[] ->
-        (n, bool_of_string p, field_to_values us)
+      | n::p::us::rem::[] ->
+        let rem_list = field_to_values rem in
+        let rem_pairs = List.map
+          (fun rem ->
+            let pipe = String.index rem '|' in
+            let content = String.sub rem 0 pipe in
+            let time = String.sub rem (pipe+1)
+                                    (String.length rem - (pipe+1)) in
+            (content, int_of_string time)
+          )
+          rem_list
+        in
+        (n, bool_of_string p, field_to_values us, rem_pairs)
       | _ -> failwith "badly formed channel info"
     in
     let done_iter = ref false in
@@ -186,6 +198,7 @@ let read_data () : t =
       is_public_mut=is_public;
       users_mut=users;
       messages_mut=messages;
+      reminders_mut=reminders;
     }
   in
 
@@ -287,10 +300,14 @@ let backup_data data =
       let chan_fname = basedir^chan.name_mut^"_channel.txt" in
       cmd ("touch " ^ chan_fname);
 
+      let remstringlist =
+        List.map (fun (c,t) -> c^"|"^(string_of_int t)) chan.reminders_mut
+      in
       let chan_info_string = (String.concat "\t" [
         chan.name_mut;
         string_of_bool chan.is_public_mut;
         (String.concat ";" chan.users_mut)^";";
+        (String.concat ";" remstringlist)^";";
       ]) ^ "\n"
       in
       let chan_fh = open_out chan_fname in
@@ -325,7 +342,7 @@ let backup_data data =
     write_users data.users;
     DynArray.iter (write_org "database/") data.organizations;
     true;
-  ) with exn -> false
+  ) with _ -> false
 
 (******************************************************************************)
 (*                            Type t Manipulation                             *)
@@ -493,7 +510,8 @@ let add_channel data oname cname pub =
       name_mut=cname;
       messages_mut=DynArray.create ();
       users_mut=[];
-      is_public_mut=pub
+      is_public_mut=pub;
+      reminders_mut=[];
     }
     in
     DynArray.add org.channels_mut new_channel;
@@ -568,3 +586,46 @@ let remove_org data orgname =
     DynArray.delete data.organizations oidx;
     true
   ) with Not_found -> false
+
+
+let add_reminder data oname cname content time =
+  try (
+    let org = get_org data.organizations oname in
+    let chan = get_chan org.channels_mut cname in
+    chan.reminders_mut <- (content, time)::chan.reminders_mut;
+    true
+  ) with Not_found -> false
+
+
+let flush_reminders data =
+  let cur_time = int_of_float (Unix.time ()) in
+
+  let is_due (_, time) =
+    time <= cur_time
+  in
+
+  let add_reminder_message (msgs : message DynArray.t) (c,t) =
+    let new_message = {
+      user_id="CamelBot";
+      timestamp=cur_time;
+      body=(ReminderMessage (c,t));
+    }
+    in
+    DynArray.add msgs new_message
+  in
+
+  let flush_channel (chan : channel_mutable) : unit =
+    let due_reminders = List.filter is_due chan.reminders_mut in
+    let pending_reminders = List.filter (fun r -> not (is_due r)) 
+                                        chan.reminders_mut
+    in
+    chan.reminders_mut <- pending_reminders;
+    List.iter (add_reminder_message chan.messages_mut) due_reminders
+  in
+
+  let flush_org (org : organization_mutable) =
+    DynArray.iter flush_channel org.channels_mut
+  in
+
+  DynArray.iter flush_org data.organizations;
+  true

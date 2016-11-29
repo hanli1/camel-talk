@@ -141,3 +141,11 @@ val add_org : t -> string -> string -> bool
 
 (** [remove_org t o] removes organization [o]. *)
 val remove_org : t -> string -> bool
+
+(** [add_reminder t o c content time] sets a reminder [content] for time
+ *  [time] in organizaiton [o], channel [c]. *)
+val add_reminder : t -> string -> string -> string -> int -> bool
+
+(** [flush_reminders ()] removes any reminders that exceed their reminder
+ *  time and send their corresponding message to the channel. *)
+val flush_reminders : t -> bool
