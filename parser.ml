@@ -1,5 +1,5 @@
 (* CInvite, #invite person organizatino
-  CVote, #vote poll optionname *)
+  CVote, #vote optionname poll  *)
 
 type command =
   | CCreate of string

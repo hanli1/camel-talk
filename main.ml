@@ -210,7 +210,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
           | Some c -> send_message_poll st.current_user c o
             (`Assoc [
               ("content", `String s);
-              ("options", `List (List.map (fun x -> `Assoc [("option", 
+              ("options", `List (List.map (fun x -> `Assoc [("option",
               `String x); ("count", `Int 0)]) xs))
             ]);
             main st
@@ -239,7 +239,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
       let resp = leave user_to_leave orgid st.current_user in
       (st.message <- resp.message); main st
     )
-    | CVote (poll, choice) -> begin
+    | CVote (choice, poll) -> begin
       match (st.current_org, st.current_channel) with
       | (Some orgid, Some chanid)->
         let resp = vote orgid chanid poll choice in
@@ -271,7 +271,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
       after the specified amount of time has elapsed.
       #set_poll [<option1>,<option2>...] <question> : sets a poll with options
       that other users of the channel can vote on.
-      #vote <pollname> <optionname> : votes on an option from an existing poll.
+      #vote <optionname> <pollname> : votes on an option from an existing poll.
       #scrollup, #scrolldown: scrolls the message list up or down respectively.
       #back, #logout: same as above."
       ); main st
