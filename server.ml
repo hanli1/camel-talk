@@ -55,9 +55,9 @@ let serialize_message m =
       "\"}"
     | PollMessage (c, options_list) ->
       let string_options_list = List.map (fun option_pair -> "{\"option\":\"" ^
-      (fst option_pair) ^ "\",\"count\":\"" ^ (string_of_int (snd option_pair))
-      ^ "\"}") options_list in
-      "{\"content\":\"" ^ c ^ "\", \"options\":" ^ "[" ^(String.concat ","
+      (fst option_pair) ^ "\",\"count\":" ^ (string_of_int (snd option_pair))
+      ^ "}") options_list in
+      "{\"content\":\"" ^ c ^ "\", \"options\":" ^ "[" ^ (String.concat ","
       string_options_list) ^ "]}"
   in
   let message_type =
@@ -135,13 +135,13 @@ let send_message_api request =
           let content = json_body |> member "message" |> member "content" |>
           to_string in
           SimpleMessage (content)
-        else if message_type = "poll" then
+        else if message_type = "reminder" then
           let content = json_body |> member "message" |> member "content" |>
           to_string in
           let reminder_time = json_body |> member "message" |> member "time" |>
           to_string |> int_of_string in
           ReminderMessage (content, reminder_time)
-        else if message_type = "reminder" then
+        else if message_type = "poll" then
           let content = json_body |> member "message" |> member "content" |>
           to_string in
           let options_list = List.map (fun option_json -> (option_json |>

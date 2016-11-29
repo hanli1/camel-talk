@@ -114,11 +114,11 @@ let rec print_votes lst =
   match lst with
   | [] -> ()
   | h::[] ->
-    let choice = get_member_string h "name" in
+    let choice = get_member_string h "option" in
     let count = get_member_int h "count" in
     ANSITerminal.(print_string [] (choice ^ ": " ^ (string_of_int count)))
   | h::t ->
-    let choice = get_member_string h "name" in
+    let choice = get_member_string h "option" in
     let count = get_member_int h "count" in
     ANSITerminal.(print_string [] (choice ^ ": " ^ (string_of_int count) ^ "\n"));
     print_votes t
