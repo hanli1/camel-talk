@@ -236,6 +236,36 @@ let leave usern orgid requester =
       |> Yojson.Basic.Util.to_string
   }
 
+let vote org chan poll choice =
+  let resp = Client.post
+  (Uri.of_string "http://127.0.0.1:8000/vote_poll")
+  ~body:(
+    `String (
+      Yojson.Basic.to_string
+      (`Assoc
+        [
+          ("organization_id", `String org);
+          ("channel_id", `String chan);
+          ("poll_id", `String poll);
+          ("choice_id", `String choice)
+        ]
+      )
+    )
+  )
+  in
+  let defresp = resp >>= (fun (_,body) -> body |> Cohttp_lwt_body.to_string >>=
+    (fun s -> s |> Yojson.Basic.from_string |> return)) |> Lwt_main.run
+  in {
+    status =
+      defresp
+      |> Yojson.Basic.Util.member "status"
+      |> Yojson.Basic.Util.to_string;
+    message =
+      defresp
+      |> Yojson.Basic.Util.member "message"
+      |> Yojson.Basic.Util.to_string
+  }
+
 let get_channels usern orgid =
   let resp = Client.get (Uri.of_string
     ("http://127.0.0.1:8000/get_channels?"^"user_id="^
