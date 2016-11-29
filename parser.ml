@@ -12,6 +12,7 @@ type command =
   | CBack
   | CIllegal
   | CLogout
+  | CQuit
   | CInvite of string * string
   | CScrollUp
   | CScrollDown
@@ -110,6 +111,7 @@ let text_to_message str screen=
   else if str = "#logout" then CLogout
   else if str = "#scrollup" then CScrollUp
   else if str = "#scrolldown" then CScrollDown
+  else if str = "#quit" then CQuit
   else
   match screen with
   | Messages -> parse_messages_screen str

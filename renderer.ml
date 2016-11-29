@@ -77,7 +77,7 @@ let print_bottom_rectangle str_dup =
  *)
 let rec render_channels_list_helper channels_lst=
   match channels_lst with
-  | [] -> ANSITerminal.(print_string [green] ("No channels of this type"));
+  | [] -> ANSITerminal.(print_string [green] ("--"));
   | h::[] -> ANSITerminal.(print_string [green] (" | " ^ h ^ " | "));
   | h::t ->
   ANSITerminal.(print_string [green] (" | " ^ h));
@@ -103,7 +103,7 @@ let render_channels_list curr_org resp_obj =
 
 let render_organizations_list resp_obj =
   print_across_screen "─";
-  ANSITerminal.(print_string [blue] ("Organizations list"));
+  ANSITerminal.(print_string [blue] ("Organizations:"));
   print_newline();
   render_channels_list_helper (get_member_list_of_string resp_obj "organizations");
   print_newline();
