@@ -45,6 +45,9 @@ let mess_screen_tests = [
   "invalid poll messages3" >:: (fun _ -> assert_equal (CIllegal) (text_to_message "#set_poll test1 test 2" Messages));
   "invalid poll messages4" >:: (fun _ -> assert_equal (CIllegal) (text_to_message "#set_poll [test 1 a" Messages));
   "invalid poll messages5" >:: (fun _ -> assert_equal (CIllegal) (text_to_message "#set_poll [test 1 a] " Messages));
+  "valid vote messages" >:: (fun _ -> assert_equal (CVote ("poll1", "option1")) (text_to_message "#vote poll1 option1" Messages));
+  "invalid vote messages" >:: (fun _ -> assert_equal (CIllegal) (text_to_message "#vote" Messages));
+  "invalid vote messages2" >:: (fun _ -> assert_equal (CIllegal) (text_to_message "#vote hello" Messages));
 ]
 
 
