@@ -61,6 +61,15 @@ let escape_str s =
   else
      s
 
+let check_special (c:char) : bool =
+  if c = 'A' || c = 'B' || c = 'C' || c = 'D' then
+  begin
+    match !current_input_stack with
+    | a::b::t when (a = escape_char '[' && b = escape_char '\027') -> (current_input_stack:=t; true)
+    | _ -> false
+  end
+  else false
+
 let rec main (st : current_state) : (unit Lwt.t) =
 	Lwt_io.read_char (Lwt_io.stdin) >>=
   (
@@ -72,6 +81,8 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | h::t ->
       (current_input_stack := t;
       main st)
+  else if check_special c then
+    main st
   else if c != '\n' then
     (current_input_stack := (escape_char c)::!current_input_stack;
     main st)
@@ -210,7 +221,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
           | Some c -> send_message_poll st.current_user c o
             (`Assoc [
               ("content", `String s);
-              ("options", `List (List.map (fun x -> `Assoc [("option", 
+              ("options", `List (List.map (fun x -> `Assoc [("option",
               `String x); ("count", `Int 0)]) xs))
             ]);
             main st
