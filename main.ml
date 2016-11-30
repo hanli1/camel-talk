@@ -193,7 +193,8 @@ let rec main (st : current_state) : (unit Lwt.t) =
           match st.current_channel with
           | None -> failwith "shouldn't happen"
           | Some c -> (send_message_reminder st.current_user c o
-            (`Assoc [("content", `String s);("time", `Int i)]); main st)
+            (`Assoc [("content", `String s);
+            ("time", `String (string_of_int i))]); main st)
         )
       )
       | _ -> failwith "shouldn't happen"

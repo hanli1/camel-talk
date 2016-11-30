@@ -147,7 +147,14 @@ let send_message_api request =
           to_string in
           let reminder_time = json_body |> member "message" |> member "time" |>
           to_string |> int_of_string in
-          ReminderMessage (content, reminder_time)
+          let _ = add_reminder all_data organization_id channel_id content
+                               reminder_time
+          in
+          let minutes = int_of_float (((float_of_int reminder_time) -. 
+                                     (Unix.time ())) /. 60.)
+          in
+          SimpleMessage ("I've set a reminder in " ^ (string_of_int minutes) ^ 
+                         " minutes: " ^ content)
         else if message_type = "poll" then
           let content = json_body |> member "message" |> member "content" |>
           to_string in
@@ -617,13 +624,13 @@ let server =
 
 (**
  * [data_backup_thread] backs up all server side data by flushing it to the
- * file system every 2 minutes
+ * file system every 2 minutes. It also flushes any reminders.
  *)
 let rec data_backup_thread =
   fun () ->
     (
-      Lwt_unix.sleep 120.0 >>= (fun () ->
-      if backup_data all_data = false then
+      Lwt_unix.sleep 60.0 >>= (fun () ->
+      if backup_data all_data = false || flush_reminders all_data = false then
         Lwt.return ()
       else
         data_backup_thread ()
