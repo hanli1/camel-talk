@@ -154,7 +154,7 @@ let send_message_api request =
                                      (Unix.time ())) /. 60.)
           in
           SimpleMessage ("I've set a reminder in " ^ (string_of_int minutes) ^ 
-                         " minutes:\n" ^ content)
+                         " minutes: " ^ content)
         else if message_type = "poll" then
           let content = json_body |> member "message" |> member "content" |>
           to_string in
