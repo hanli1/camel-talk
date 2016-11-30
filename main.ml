@@ -45,6 +45,10 @@ let escape_str s =
   else
      s
 
+(**
+ * [check_special c] checks to see if char [c] is a possible pecial arrow
+ * character, and then mutates the stack to get rid of string if needed
+ *)
 let check_special (c:char) : bool =
   if c = 'A' || c = 'B' || c = 'C' || c = 'D' then
   begin
@@ -247,13 +251,13 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | CCreateDirectMessage s ->
         (
         match st.current_screen with
-        | Organizations -> 
+        | Organizations ->
           (st.message <- "Not a valid command in this screen."); main st
         | Channels -> (
           match st.current_org with
           | None -> failwith "shouldn't happen"
           | Some o ->
-            let channel_name = "directmessage@" ^ 
+            let channel_name = "directmessage@" ^
             (if (String.compare st.current_user s) <= 0  then
               st.current_user ^ "@" ^ s
             else
@@ -263,17 +267,17 @@ let rec main (st : current_state) : (unit Lwt.t) =
             (st.message <- resp.message); main st
         )
         | Messages -> failwith "shouldn't happen"
-        )    
+        )
     | CDirectMessage s ->
         (
         match st.current_screen with
-        | Organizations -> 
+        | Organizations ->
           (st.message <- "Not a valid command in this screen."); main st
         | Channels -> (
           match st.current_org with
           | None -> failwith "shouldn't happen"
           | Some o ->
-            let channel_name = "directmessage@" ^ 
+            let channel_name = "directmessage@" ^
             (if (String.compare st.current_user s) <= 0  then
               st.current_user ^ "@" ^ s
             else
@@ -461,7 +465,7 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
           match c.current_channel with
           | None -> failwith "shouldn't happen"
           | Some ch ->
-            let response_json = 
+            let response_json =
             snd (get_messages c.current_user ch o c.current_line) in
             (ANSITerminal.(erase Above);
             ANSITerminal.(move_cursor (-100) 0);
