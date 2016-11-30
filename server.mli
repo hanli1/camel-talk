@@ -62,10 +62,10 @@ val create_channel_api : request_record -> response_record
 val delete_channel_api : request_record -> response_record
 
 (**
- * processes a user request to get all public channels associated
- * with an organization and also the user's private channels
+ * processes a user request to get information about an organization, which
+ * includes public channels, private channels, and users of the organization
  *)
-val get_channels_api : request_record -> response_record
+val get_org_info_api : request_record -> response_record
 
 (**
  * processes a user request to get up to 10 messages of a channel of an
@@ -73,4 +73,13 @@ val get_channels_api : request_record -> response_record
  *)
 val get_messages_api : request_record -> response_record
 
+(**
+ * processes a user request to get the organizations he/she is a part of
+ *)
+val get_user_organizations_api : request_record -> response_record
+
+(**
+ * processes a user request to vote on a given poll of a channel of an
+ * organization
+ *)
 val vote_poll_api : request_record -> response_record

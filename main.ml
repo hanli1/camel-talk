@@ -14,22 +14,6 @@ type current_state = {
   mutable message : string
 }
 
-type command =
-  | CCreate of string
-  | CDelete of string
-  | CSwitch of string
-  | CSimpleMessage of string
-  | CReminderMessage of string * int
-  | CPollMessage of string * string list
-  | CBack
-  | CHelp
-  | CIllegal
-  | CLogout
-  | CInvite of string * string
-  | CScrollUp
-  | CScrollDown
-  | CLeave of string * string
-  | CVote of string * string
 
 let current_input_stack = ref []
 
@@ -149,13 +133,13 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | CSwitch s -> (
       match st.current_screen with
       | Organizations -> (
-          let resp = Client.get_channels st.current_user s in
+          let resp = Client.get_org_info st.current_user s in
           match (fst resp) with
           | "failure" -> (
-            (st.message <- "Not a valid switch"); main st
+            (st.message <- "Not a valid command"); main st
           )
           | "success" -> (
-            (st.message <- ("Switched into "^s));
+            (st.message <- ("Switched into organization \""^s^"\""));
             st.current_org <- Some s;
             st.current_screen <- Channels;
             main st
@@ -172,7 +156,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
             (st.message <- "Not a valid switch"); main st
           )
           | "success" -> (
-            (st.message <- ("Switched into "^o));
+            (st.message <- ("Switched into channel \""^s^"\""));
             st.current_channel <- Some s;
             st.current_screen <- Messages;
             main st
@@ -242,6 +226,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         main st
     )
     | CLogout -> Lwt.return ()
+    | CQuit -> st.message <- "Goodbye"; Lwt_unix.sleep 0.1 >>= (fun () -> exit 0)
     | CInvite (user_to_join, orgid) -> (
       let resp = invite user_to_join orgid st.current_user in
       (st.message <- resp.message); main st
@@ -255,10 +240,60 @@ let rec main (st : current_state) : (unit Lwt.t) =
       | (Some orgid, Some chanid)->
         let resp = vote orgid chanid poll choice in
         (st.message <- resp.message); main st
-      | (_, _)-> failwith "wtf"
+      | (_, _)-> failwith "shouldn't happen"
       end
     | CScrollUp -> st.current_line <- st.current_line + 10 ; main st
     | CScrollDown -> st.current_line <- st.current_line - 10 ; main st
+    | CCreateDirectMessage s ->
+        (
+        match st.current_screen with
+        | Organizations -> 
+          (st.message <- "Not a valid command in this screen."); main st
+        | Channels -> (
+          match st.current_org with
+          | None -> failwith "shouldn't happen"
+          | Some o ->
+            let channel_name = "directmessage@" ^ 
+            (if (String.compare st.current_user s) <= 0  then
+              st.current_user ^ "@" ^ s
+            else
+              s ^ "@" ^ st.current_user
+            ) in
+            let resp = Client.create_channel st.current_user o channel_name in
+            (st.message <- resp.message); main st
+        )
+        | Messages -> failwith "shouldn't happen"
+        )    
+    | CDirectMessage s ->
+        (
+        match st.current_screen with
+        | Organizations -> 
+          (st.message <- "Not a valid command in this screen."); main st
+        | Channels -> (
+          match st.current_org with
+          | None -> failwith "shouldn't happen"
+          | Some o ->
+            let channel_name = "directmessage@" ^ 
+            (if (String.compare st.current_user s) <= 0  then
+              st.current_user ^ "@" ^ s
+            else
+              s ^ "@" ^ st.current_user
+            ) in
+            let resp = Client.get_messages st.current_user channel_name o 0 in
+            match (fst resp) with
+            | "failure" -> (
+              (st.message <- "Not a valid switch"); main st
+            )
+            | "success" -> (
+              (st.message <- ("Switched into direct message with \""^s^"\""));
+              st.current_channel <- Some channel_name;
+              st.current_screen <- Messages;
+              main st
+            )
+          | _ -> failwith "unknown response"
+        )
+        | Messages -> failwith "shouldn't happen"
+        )
     | CHelp ->
       (st.message <-
       "Help info:
@@ -272,9 +307,13 @@ let rec main (st : current_state) : (unit Lwt.t) =
       the specified organization. (only for organization screen)
       #leave <username> <organization name> : kicks out the user from the
       specified organization. (only for organization screen)
-      #logout : logs out
+      #logout : logs out, #quit : quits the application
       #back : goes out of channel screen into the organization screen
-
+      While in CHANNEL screen:
+      #create_direct_message <username> : creates a direct message channel
+      with the specified user in the current organization
+      #direct_message <username> : enters a direct message channel with the
+      specified user in the current organization
       While in MESSAGE screen:
       <anything not starting with #> : sends a message containing only text
       #set_reminder <text> <time> : sets a reminder that sends a message with
@@ -284,7 +323,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
       that other users of the channel can vote on.
       #vote <pollname> <optionname> : votes on an option from an existing poll.
       #scrollup, #scrolldown: scrolls the message list up or down respectively.
-      #back, #logout: same as above."
+      #back, #logout, #quit: same as above."
       ); main st
     | _ -> failwith "unimplemented command"
     )
@@ -368,25 +407,15 @@ and run_app_threads st =
 and draw_update c =
   let print_persist () =
   ANSITerminal.(print_string []
-" .d8888b.                         888 888             888 888
-d88P  Y88b                        888 888             888 888
-888    888                        888 888             888 888
-888         8888b.  88888b.d88b.  888 888888  8888b.  888 888  888
-888             88b 888  888  88b 888 888         88b 888 888 .88P
-888    888 .d888888 888  888  888 888 888    .d888888 888 888888K
-Y88b  d88P 888  888 888  888  888 888 Y88b.  888  888 888 888  88b
-  Y8888P    Y888888 888  888  888 888   Y888  Y888888 888 888  888
-
-
-
-Y88b     .d8888b.   d888    d888   .d8888b.     d88P
- Y88b   d88P  Y88b d8888   d8888  d88P  Y88b   d88P
-  Y88b       .d88P   888     888  888    888  d88P
-   Y88b     8888     888     888  888    888 d88P
-   d88P       Y8b.   888     888  888    888 Y88b
-  d88P  888    888   888     888  888    888  Y88b
- d88P   Y88b  d88P   888     888  Y88b  d88P   Y88b
-d88P      Y8888P   8888888 8888888  Y8888P      Y88b   \n\n\n\n\n\n\n"
+" .d8888b.                                   888 888             888 888
+d88P  Y88b                                   888 888             888 888
+888    888                                   888 888             888 888
+888         8888b.  88888b.d88b.    888888   888 888888  8888b.  888 888  888
+888             88b 888  888  88b  88    88  888 888         88b 888 888 .88P
+888    888 .d888888 888  888  888  88888888  888 888    .d888888 888 888888K
+Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
+  Y8888P    Y888888 888  888  888   888888    888   Y888  Y888888 888 888  888
+"
   );
   ANSITerminal.(print_string [magenta]
   ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"^
@@ -413,11 +442,11 @@ d88P      Y8888P   8888888 8888888  Y8888P      Y88b   \n\n\n\n\n\n\n"
         match c.current_org with
         | None -> failwith "shouldn't happen"
         | Some o ->
-          let response_json = snd (get_channels c.current_user o) in
+          let response_json = snd (get_org_info c.current_user o) in
           (ANSITerminal.(erase Above);
           ANSITerminal.(move_cursor (-100) 0);
           print_persist ();
-          render_channels_list o response_json;
+          render_org_info o c.current_user response_json;
           ANSITerminal.(print_string [] (String.concat ""
           (List.rev !current_input_stack)));
           flush_all ();
@@ -432,10 +461,11 @@ d88P      Y8888P   8888888 8888888  Y8888P      Y88b   \n\n\n\n\n\n\n"
           match c.current_channel with
           | None -> failwith "shouldn't happen"
           | Some ch ->
-            let response_json = snd (get_messages c.current_user ch o 0) in
+            let response_json = 
+            snd (get_messages c.current_user ch o c.current_line) in
             (ANSITerminal.(erase Above);
             ANSITerminal.(move_cursor (-100) 0);
-            render_channel_messages response_json;
+            render_channel_messages c.message o ch response_json;
             ANSITerminal.(print_string [] (String.concat "" (List.rev
             !current_input_stack)));
             flush_all ();
@@ -482,7 +512,7 @@ MMMM         MMMM           MMMM           MM
   	"Would you like to log in or register?");
   ANSITerminal.(print_string [Bold; blue]
   	"\nType \"login\" to Log in, or \"register\" to Register\n");
-  ANSITerminal.(print_string [Blink] "> ");
+  ANSITerminal.(print_string [] "> ");
   (let termio = Unix.tcgetattr Unix.stdin in
   Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true;
   Unix.c_echo = true;});

@@ -1,22 +1,25 @@
 (**
- * Values of type command represent user commands to the REPL. Examples of how
- * commands are represented:
- *  - CIllegal represents an unparseable message
- *  - CSimpleMessage "Hello" represents the message "Hello"
- *  - CReminderMessage ("Walk the camel", 500) represents a command to remind
- *    the user to walk the camel at 500 seconds after 1970.
- *  - CPollMessage ("What's your favorite color?", ["Blue", "Red"]) represents
- *    a poll titled "What's your favorite color?" and with options "Blue" and
- *    "Red"
- *  - CCreateOrg "CS3110" represents a request to create an organization called
- *    "CS3110"
- *  - CDeleteOrg "CS3110" represents a request to delete an organization called
- *    "CS3110"
- *  - CCreateChannel and CDeleteChannel behave similarly to CCreateOrg and
- *    CDeleteOrg
- *  - CSwitchOrg "CS2110" represents a request to switch to the organization
- *    called "CS2110"
- *  - CSwitchChannel behaves similarly to CSwitchOrg.
+ * Values of type command represent user commands to the REPL.
+ * CCreate - Creates an organization or public channel from the given string
+ * CDelete - Deletes an organization or public channel specified by given 
+ * string
+ * CSwitch - Switch into the given organization or channel
+ * CSimpleMessage - Sends a simple message (regular text)
+ * CReminderMessage - Sends a message indicating that a reminder message
+ * should be sent by the server/camel talk bot at a given time
+ * CPollMessage - Sends a poll message with name and various options
+ * CHelp - Displays a help menu for the user displaying syntax for commands
+ * CBack - Returns the user to the previous screen
+ * CIllegal - Represents an illegal command
+ * CLogout - Logouts a user from his/her session
+ * CQuit -  Quits a user out of the application
+ * CInvite - Invites another user to an organization
+ * CScrollUp - Scrolls up in a channel's message history
+ * CScrollDown - Scrolls down in a channel's message history
+ * CLeave - Allows a user to leave an organization
+ * CVote - Allows the user to vote (select an option) in a given poll
+ * CCreateDirectMessage - Creates a direct message channel between two users
+ * CDirectMessage - Switch to a direct message channel between two users
  *)
 type command =
   | CCreate of string
@@ -29,11 +32,15 @@ type command =
   | CBack
   | CIllegal
   | CLogout
+  | CQuit
   | CInvite of string * string
   | CScrollUp
   | CScrollDown
   | CLeave of string * string
   | CVote of string * string
+  | CCreateDirectMessage of string
+  | CDirectMessage of string
+
 
 type screen =
   | Messages
