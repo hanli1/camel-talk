@@ -266,9 +266,9 @@ let vote org chan poll choice =
       |> Yojson.Basic.Util.to_string
   }
 
-let get_channels usern orgid =
+let get_org_info usern orgid =
   let resp = Client.get (Uri.of_string
-    ("http://127.0.0.1:8000/get_channels?"^"user_id="^
+    ("http://127.0.0.1:8000/get_org_info?"^"user_id="^
       usern^"&organization_id="^orgid))
   in
   let resp_json = resp >>= (fun (_,body) ->

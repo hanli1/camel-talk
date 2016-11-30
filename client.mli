@@ -71,9 +71,10 @@ val delete_channel : string -> string -> string -> response
 
 (**
  * Takes in user id and organization name and returns a json object containing
- * an array of team channels and private channels
+ * information about the organization: the list of team channels, the lsit of private
+ * channels, and the list of users in the organization
  *)
-val get_channels : string -> string -> string * Yojson.Basic.json
+val get_org_info : string -> string -> string * Yojson.Basic.json
 
 (**
  * Takes in user id, organization name, channel name, start index, and

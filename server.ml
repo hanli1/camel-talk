@@ -121,6 +121,13 @@ let add_users_to_channel organization_id channel_id =
     add_users_to_channel_helper o.users
   | None -> false
 
+(**
+ * [serialize_list l] is a string that represents the serialization of a list
+ * for compatibility with JSON
+ *)
+let serialize_list l =
+  "[" ^(String.concat "," (List.map (fun c -> "\"" ^ c ^ "\"") l)) ^ "]"
+
 let send_message_api request =
   let meth = request.request_info |> Request.meth |> Code.string_of_method in
   if meth = "POST" then
@@ -434,7 +441,7 @@ let delete_channel_api request =
     {status_code=400; response_body="{\"status\":\"failure\",\"message\"" ^
     ":\"Wrong HTTP method for this request\"}"}
 
-let get_channels_api request =
+let get_org_info_api request =
   let meth = request.request_info |> Request.meth |> Code.string_of_method in
   if meth = "GET" then
     try
@@ -461,13 +468,13 @@ let get_channels_api request =
               | None -> raise (Failure "Channel does not exist")
           ) o.channel_names
           in
-          let team_channels_serialized = "[" ^ (String.concat ","
-          (List.map (fun c -> "\"" ^ c ^ "\"") team_channels)) ^ "]" in
-          let private_channels_serialized = "[" ^(String.concat ","
-          (List.map (fun c -> "\"" ^ c ^ "\"") private_channels)) ^ "]" in
+          let team_channels_serialized = serialize_list team_channels in
+          let private_channels_serialized = serialize_list private_channels in
+          let users_serialized = serialize_list o.users in
           {status_code=200; response_body="{\"status\":\"success\",\"team_" ^
           "channels\":" ^ team_channels_serialized ^ ", \"" ^
-          "private_channels\":" ^ private_channels_serialized ^ "}"}
+          "private_channels\":" ^ private_channels_serialized ^ ", \"" ^
+          "users\":" ^ users_serialized ^ "}"}
         else
           {status_code=200; response_body="{\"status\":\"failure\",\"message\"" ^
           ":\"User does not belong to this organization\"}"}
@@ -585,8 +592,8 @@ let request_router _conn req body =
           create_channel_api {request_info=req; request_body=body}
         else if uri_path = "/delete_channel" then
           delete_channel_api {request_info=req; request_body=body}
-        else if uri_path = "/get_channels" then
-          get_channels_api {request_info=req; request_body=body}
+        else if uri_path = "/get_org_info" then
+          get_org_info_api {request_info=req; request_body=body}
         else if uri_path = "/get_messages" then
           get_messages_api {request_info=req; request_body=body}
         else if uri_path = "/get_user_organizations" then
