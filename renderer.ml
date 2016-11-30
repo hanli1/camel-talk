@@ -168,7 +168,7 @@ let render_message msg =
   end
   else if msg_type = "reminder" then begin
     print_meta_data user_id time_stamp;
-    ANSITerminal.(print_string [] ("Reminder set for " ^ (get_member_string mess "content") ^" for " ^ (get_member_string mess "time")));
+    ANSITerminal.(print_string [] ((get_member_string mess "time") ^ " reminder: " ^ (get_member_string mess "content")));
     print_newline ()
   end
   else begin
