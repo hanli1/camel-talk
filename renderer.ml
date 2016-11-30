@@ -1,4 +1,5 @@
 open Unix
+open Str
 
 let json_to_list json =
   let open Yojson.Basic.Util in
@@ -83,22 +84,31 @@ let rec render_channels_list_helper channels_lst=
   ANSITerminal.(print_string [green] (" | " ^ h));
   render_channels_list_helper t
 
-let render_channels_list curr_org resp_obj =
-  ANSITerminal.(print_string [blue] ("Current organization: " ^ curr_org));
+let render_org_info curr_org current_user resp_obj =
+  ANSITerminal.(print_string [blue] ("Current Organization: " ^ curr_org));
   print_newline();
   print_across_screen "─";
   ANSITerminal.(print_string [green] ("Public Channels"));
-  print_newline();(*
-  print_across_screen "─"; *)
+  print_newline();
   render_channels_list_helper (get_member_list_of_string resp_obj "team_channels");
   print_newline();
   print_across_screen "─";
   ANSITerminal.(print_string [green] ("Private Channels"));
   print_newline();
-  (* print_across_screen "─"; *)
-  render_channels_list_helper (get_member_list_of_string resp_obj "private_channels");
+  render_channels_list_helper (List.map (
+    fun c -> 
+      let channel_components = split (regexp_string "@") c in
+      let first_user = List.nth channel_components 1 in
+      let second_user = List.nth channel_components 2 in
+      if current_user = first_user then second_user else first_user
+  ) (get_member_list_of_string resp_obj "private_channels"));
   print_newline();
   print_across_screen "─";
+  ANSITerminal.(print_string [green] ("Users in Organization:"));
+  print_newline();
+  render_channels_list_helper (get_member_list_of_string resp_obj "users");
+  print_newline();
+  print_across_screen "─";  
   flush_all ()
 
 let render_organizations_list resp_obj =
@@ -174,7 +184,22 @@ let rec render_channel_messages_helper lst =
   | [] -> ()
   | h::t -> render_message h; render_channel_messages_helper t
 
-let render_channel_messages resp_obj =
+let render_channel_messages status_message curr_org curr_channel resp_obj =
+  let () = 
+    if (String.length curr_channel >= 14) && (String.sub curr_channel 0 14) = 
+    "directmessage@" then
+      (ANSITerminal.(print_string [magenta]
+      ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" ^ 
+      "~~~~~~~~\n" ^ (status_message) ^ "\nCurrent organization: " ^ curr_org ^ 
+      "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" ^ 
+      "~~~~~~~~~\n")))
+    else
+      (ANSITerminal.(print_string [magenta]
+      ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" ^ 
+      "~~~~~~~~\n" ^ (status_message) ^ "\nCurrent organization: " ^ curr_org ^ 
+      " | Current channel: "^curr_channel ^"\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" ^ 
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")))
+  in
   let open Yojson.Basic.Util in
   render_channel_messages_helper (json_to_list (resp_obj |> member "messages"));
   flush_all ()
