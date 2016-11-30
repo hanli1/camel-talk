@@ -45,6 +45,19 @@ let escape_str s =
   else
      s
 
+(**
+ * [check_special c] checks to see if char [c] is a possible pecial arrow
+ * character, and then mutates the stack to get rid of string if needed
+ *)
+let check_special (c:char) : bool =
+  if c = 'A' || c = 'B' || c = 'C' || c = 'D' then
+  begin
+    match !current_input_stack with
+    | a::b::t when (a = escape_char '[' && b = escape_char '\027') -> (current_input_stack:=t; true)
+    | _ -> false
+  end
+  else false
+
 let rec main (st : current_state) : (unit Lwt.t) =
 	Lwt_io.read_char (Lwt_io.stdin) >>=
   (
@@ -56,6 +69,8 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | h::t ->
       (current_input_stack := t;
       main st)
+  else if check_special c then
+    main st
   else if c != '\n' then
     (current_input_stack := (escape_char c)::!current_input_stack;
     main st)
@@ -195,7 +210,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
           | Some c -> send_message_poll st.current_user c o
             (`Assoc [
               ("content", `String s);
-              ("options", `List (List.map (fun x -> `Assoc [("option", 
+              ("options", `List (List.map (fun x -> `Assoc [("option",
               `String x); ("count", `Int 0)]) xs))
             ]);
             main st
@@ -237,13 +252,13 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | CCreateDirectMessage s ->
         (
         match st.current_screen with
-        | Organizations -> 
+        | Organizations ->
           (st.message <- "Not a valid command in this screen."); main st
         | Channels -> (
           match st.current_org with
           | None -> failwith "shouldn't happen"
           | Some o ->
-            let channel_name = "directmessage@" ^ 
+            let channel_name = "directmessage@" ^
             (if (String.compare st.current_user s) <= 0  then
               st.current_user ^ "@" ^ s
             else
@@ -253,17 +268,17 @@ let rec main (st : current_state) : (unit Lwt.t) =
             (st.message <- resp.message); main st
         )
         | Messages -> failwith "shouldn't happen"
-        )    
+        )
     | CDirectMessage s ->
         (
         match st.current_screen with
-        | Organizations -> 
+        | Organizations ->
           (st.message <- "Not a valid command in this screen."); main st
         | Channels -> (
           match st.current_org with
           | None -> failwith "shouldn't happen"
           | Some o ->
-            let channel_name = "directmessage@" ^ 
+            let channel_name = "directmessage@" ^
             (if (String.compare st.current_user s) <= 0  then
               st.current_user ^ "@" ^ s
             else
@@ -451,7 +466,7 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
           match c.current_channel with
           | None -> failwith "shouldn't happen"
           | Some ch ->
-            let response_json = 
+            let response_json =
             snd (get_messages c.current_user ch o c.current_line) in
             (ANSITerminal.(erase Above);
             ANSITerminal.(move_cursor (-100) 0);
