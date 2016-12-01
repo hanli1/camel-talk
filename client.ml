@@ -9,8 +9,12 @@ type response = {
   message: string
 }
 
-let login_user usern passw =
-  let resp = Client.post (Uri.of_string "http://127.0.0.1:8000/login_user")
+let server_address _ =
+  "http://97cdbffd.ngrok.io/"
+  (* "http://127.0.0.1:8000/" *)
+
+let login_user usern passw server_addr=
+  let resp = Client.post (Uri.of_string (server_addr ^ "login_user"))
   ~body: (
     `String (
     	 Yojson.Basic.to_string
@@ -31,8 +35,8 @@ let login_user usern passw =
       |> Yojson.Basic.Util.member "message"
       |> Yojson.Basic.Util.to_string}
 
-let register_user usern passw =
-  let resp = Client.post (Uri.of_string "http://127.0.0.1:8000/register_user")
+let register_user usern passw server_addr=
+  let resp = Client.post (Uri.of_string (server_addr ^ "register_user"))
   ~body: (
     `String (
   	   Yojson.Basic.to_string
@@ -54,9 +58,9 @@ let register_user usern passw =
       |> Yojson.Basic.Util.to_string
   }
 
-let send_message_simple usern chanid orgid jmessage =
+let send_message_simple usern chanid orgid jmessage server_addr=
   let _ = Client.post
-  (Uri.of_string "http://127.0.0.1:8000/send_message")
+  (Uri.of_string (server_addr^"send_message"))
   ~body: (
     `String (
   	   Yojson.Basic.to_string
@@ -67,9 +71,9 @@ let send_message_simple usern chanid orgid jmessage =
   )
  in ()
 
-let send_message_poll usern chanid orgid jmessage =
+let send_message_poll usern chanid orgid jmessage server_addr=
   let _ = Client.post
-  (Uri.of_string "http://127.0.0.1:8000/send_message")
+  (Uri.of_string (server_addr^"send_message"))
   ~body: (
     `String (
   	   Yojson.Basic.to_string
@@ -80,9 +84,9 @@ let send_message_poll usern chanid orgid jmessage =
   )
  in ()
 
-let send_message_reminder usern chanid orgid jmessage =
+let send_message_reminder usern chanid orgid jmessage server_addr=
   let _ = Client.post
-  (Uri.of_string "http://127.0.0.1:8000/send_message")
+  (Uri.of_string (server_addr^"send_message"))
   ~body:(
     `String (
   	   Yojson.Basic.to_string
@@ -93,9 +97,9 @@ let send_message_reminder usern chanid orgid jmessage =
   )
  in ()
 
-let create_organization usern orgid =
+let create_organization usern orgid server_addr=
   let resp = Client.post
-  (Uri.of_string "http://127.0.0.1:8000/create_organization")
+  (Uri.of_string (server_addr^"create_organization"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -116,9 +120,9 @@ let create_organization usern orgid =
       |> Yojson.Basic.Util.to_string
   }
 
-let delete_organization usern orgid =
+let delete_organization usern orgid server_addr=
   let resp = Client.post
-  (Uri.of_string "http://127.0.0.1:8000/delete_organization")
+  (Uri.of_string (server_addr^"delete_organization"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -140,9 +144,9 @@ let delete_organization usern orgid =
       |> Yojson.Basic.Util.to_string
   }
 
-let create_channel usern orgid chanid =
+let create_channel usern orgid chanid server_addr=
   let resp = Client.post
-    (Uri.of_string "http://127.0.0.1:8000/create_channel")
+    (Uri.of_string (server_addr^"create_channel"))
   ~body: (
     `String (
       Yojson.Basic.to_string
@@ -164,9 +168,9 @@ let create_channel usern orgid chanid =
       |> Yojson.Basic.Util.to_string
   }
 
-let delete_channel usern orgid chanid =
+let delete_channel usern orgid chanid server_addr=
   let resp = Client.post
-  (Uri.of_string "http://127.0.0.1:8000/delete_channel")
+  (Uri.of_string (server_addr^"delete_channel"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -188,9 +192,9 @@ let delete_channel usern orgid chanid =
       |> Yojson.Basic.Util.to_string
   }
 
-let invite usern orgid requester =
+let invite usern orgid requester server_addr=
   let resp = Client.post
-  (Uri.of_string "http://127.0.0.1:8000/invite_user_organization")
+  (Uri.of_string (server_addr^"invite_user_organization"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -212,9 +216,9 @@ let invite usern orgid requester =
       |> Yojson.Basic.Util.to_string
   }
 
-let leave usern orgid requester =
+let leave usern orgid requester server_addr=
   let resp = Client.post
-  (Uri.of_string "http://127.0.0.1:8000/remove_user_organization")
+  (Uri.of_string (server_addr^"remove_user_organization"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -236,9 +240,9 @@ let leave usern orgid requester =
       |> Yojson.Basic.Util.to_string
   }
 
-let vote org chan poll choice =
+let vote org chan poll choice server_addr=
   let resp = Client.post
-  (Uri.of_string "http://127.0.0.1:8000/vote_poll")
+  (Uri.of_string (server_addr^"vote_poll"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -266,9 +270,9 @@ let vote org chan poll choice =
       |> Yojson.Basic.Util.to_string
   }
 
-let get_org_info usern orgid =
+let get_org_info usern orgid server_addr=
   let resp = Client.get (Uri.of_string
-    ("http://127.0.0.1:8000/get_org_info?"^"user_id="^
+    (server_addr^"get_org_info?"^"user_id="^
       usern^"&organization_id="^orgid))
   in
   let resp_json = resp >>= (fun (_,body) ->
@@ -277,9 +281,9 @@ let get_org_info usern orgid =
     ((resp_json |> Yojson.Basic.Util.member "status"
     |> Yojson.Basic.Util.to_string), resp_json)
 
-let get_messages usern chanid orgid start_index =
+let get_messages usern chanid orgid start_index server_addr=
   let resp = Client.get (Uri.of_string
-    ("http://127.0.0.1:8000/get_messages?"^"user_id="^usern
+    (server_addr^"get_messages?"^"user_id="^usern
       ^"&channel_id="^chanid
       ^"&organization_id="^orgid
       ^"&start_index="^(string_of_int start_index)))
@@ -292,9 +296,9 @@ let get_messages usern chanid orgid start_index =
     |> Yojson.Basic.Util.to_string),
     resp_json)
 
-let get_user_organizations usern =
+let get_user_organizations usern server_addr=
   let resp = Client.get (Uri.of_string
-    ("http://127.0.0.1:8000/get_user_organizations?"^"user_id="^usern))
+    (server_addr^"get_user_organizations?"^"user_id="^usern))
   in
   let resp_json = resp >>= (fun (_,body) ->
   body |> Cohttp_lwt_body.to_string >>=

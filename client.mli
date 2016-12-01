@@ -17,76 +17,76 @@ type response = {
  * Simple message: only text
  *)
 val send_message_simple : string -> string -> string ->
-	Yojson.Basic.json -> unit
+	Yojson.Basic.json -> string -> unit
 
 (**
  * Poll message: other members of the channel can vote on a specific option
  *)
 val send_message_poll : string -> string -> string ->
-	Yojson.Basic.json -> unit
+	Yojson.Basic.json -> string -> unit
 
 (**
  * Reminder message: the message is sent to the specified channel only at a
  * specified pre-set time. The time is set up in the json.
  *)
 val send_message_reminder : string -> string -> string ->
-	Yojson.Basic.json -> unit
+	Yojson.Basic.json -> string -> unit
 
 (**
  * Upon startup, prompts the user to either login or register. Takes in
  * a new username and password unique pairing to store in the server and allow
  * future authentications
  *)
-val register_user : string -> string -> response
+val register_user : string -> string -> string -> response
 
 (**
  * Takes in existing username and password, checks if it is a correct
  * unique pairing
  *)
-val login_user : string -> string -> response
+val login_user : string -> string -> string -> response
 
 (**
  * Takes in the organization name to be created and te user_id, then
  * creates the organization. This should also update/repaint the interface
  *)
-val create_organization : string -> string -> response
+val create_organization : string -> string -> string -> response
 
 (**
  * Similar inputs to create_organization, but instead deletes an existing
  * organization
  *)
-val delete_organization : string -> string -> response
+val delete_organization : string -> string -> string -> response
 
 (**
  * Takes in the user id and an organization name, as well as the name of the
  * channel to be created. Creates the channel inside the organization specified
  *)
-val create_channel : string -> string -> string -> response
+val create_channel : string -> string -> string -> string -> response
 
 (**
  * Similar to create_channel, except deletes the specified channel name from
  * the specified organization
  *)
-val delete_channel : string -> string -> string -> response
+val delete_channel : string -> string -> string -> string -> response
 
 (**
  * Takes in user id and organization name and returns a json object containing
  * information about the organization: the list of team channels, the lsit of private
  * channels, and the list of users in the organization
  *)
-val get_org_info : string -> string -> string * Yojson.Basic.json
+val get_org_info : string -> string -> string -> string * Yojson.Basic.json
 
 (**
  * Takes in user id, organization name, channel name, start index, and
  * returns a json object containing the message, message type, user_id of the
  * responder, and time stamp, among other things
  *)
-val get_messages : string -> string -> string -> int -> string * Yojson.Basic.json
+val get_messages : string -> string -> string -> int -> string -> string * Yojson.Basic.json
 
-val get_user_organizations : string -> string * Yojson.Basic.json
+val get_user_organizations : string -> string -> string * Yojson.Basic.json
 
-val invite : string -> string -> string -> response
+val invite : string -> string -> string -> string -> response
 
-val leave : string -> string -> string -> response
+val leave : string -> string -> string -> string -> response
 
-val vote : string -> string -> string -> string -> response
+val vote : string -> string -> string -> string -> string -> response
