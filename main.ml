@@ -16,6 +16,9 @@ type current_state = {
 
 
 let current_input_stack = ref []
+let server_addr = ref ""
+
+(* http://97cdbffd.ngrok.io/ *)
 
 (**
  * [escape_char c] escapes the character [c] and provides compatibility
@@ -85,14 +88,14 @@ let rec main (st : current_state) : (unit Lwt.t) =
       (
       match st.current_screen with
       | Organizations -> (
-          let resp = Client.create_organization st.current_user s in
+          let resp = Client.create_organization st.current_user s !server_addr in
           (st.message <- resp.message); main st
       )
       | Channels -> (
         match st.current_org with
         | None -> failwith "shouldn't happen"
         | Some o ->
-          let resp = Client.create_channel st.current_user o s in
+          let resp = Client.create_channel st.current_user o s !server_addr in
           (st.message <- resp.message); main st
       )
       | Messages -> failwith "shouldn't happen"
@@ -101,7 +104,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | CDelete s -> (
       match st.current_screen with
       | Organizations ->
-          let resp = Client.delete_organization st.current_user s in
+          let resp = Client.delete_organization st.current_user s !server_addr in
           (st.message <- resp.message);
           (
             match resp.status with
@@ -116,7 +119,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         match st.current_org with
         | None -> failwith "shouldn't happen"
         | Some o ->
-          let resp = Client.delete_channel st.current_user o s in
+          let resp = Client.delete_channel st.current_user o s !server_addr in
           (st.message <- resp.message);
           (
             match resp.status with
@@ -137,7 +140,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | CSwitch s -> (
       match st.current_screen with
       | Organizations -> (
-          let resp = Client.get_org_info st.current_user s in
+          let resp = Client.get_org_info st.current_user s !server_addr in
           match (fst resp) with
           | "failure" -> (
             (st.message <- "Not a valid command"); main st
@@ -154,7 +157,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         match st.current_org with
         | None -> failwith "shouldn't happen"
         | Some o -> (
-          let resp = Client.get_messages st.current_user s o 0 in
+          let resp = Client.get_messages st.current_user s o 0 !server_addr in
           match (fst resp) with
           | "failure" -> (
             (st.message <- "Not a valid switch"); main st
@@ -179,7 +182,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
           match st.current_channel with
           | None -> failwith "shouldn't happen"
           | Some c -> (send_message_simple st.current_user c o
-            (`Assoc [("content", `String s)]); main st)
+            (`Assoc [("content", `String s)]) !server_addr; main st)
         )
       )
       | _ -> failwith "shouldn't happen"
@@ -194,7 +197,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
           | None -> failwith "shouldn't happen"
           | Some c -> (send_message_reminder st.current_user c o
             (`Assoc [("content", `String s);
-            ("time", `String (string_of_int i))]); main st)
+            ("time", `String (string_of_int i))]) !server_addr; main st)
         )
       )
       | _ -> failwith "shouldn't happen"
@@ -212,7 +215,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
               ("content", `String s);
               ("options", `List (List.map (fun x -> `Assoc [("option",
               `String x); ("count", `Int 0)]) xs))
-            ]);
+            ]) !server_addr;
             main st
         )
       )
@@ -233,17 +236,17 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | CLogout -> Lwt.return ()
     | CQuit -> st.message <- "Goodbye"; Lwt_unix.sleep 0.1 >>= (fun () -> exit 0)
     | CInvite (user_to_join, orgid) -> (
-      let resp = invite user_to_join orgid st.current_user in
+      let resp = invite user_to_join orgid st.current_user !server_addr in
       (st.message <- resp.message); main st
     )
     | CLeave (user_to_leave, orgid) -> (
-      let resp = leave user_to_leave orgid st.current_user in
+      let resp = leave user_to_leave orgid st.current_user !server_addr in
       (st.message <- resp.message); main st
     )
     | CVote (poll, choice) -> begin
       match (st.current_org, st.current_channel) with
       | (Some orgid, Some chanid)->
-        let resp = vote orgid chanid poll choice in
+        let resp = vote orgid chanid poll choice !server_addr in
         (st.message <- resp.message); main st
       | (_, _)-> failwith "shouldn't happen"
       end
@@ -264,7 +267,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
             else
               s ^ "@" ^ st.current_user
             ) in
-            let resp = Client.create_channel st.current_user o channel_name in
+            let resp = Client.create_channel st.current_user o channel_name !server_addr in
             (st.message <- resp.message); main st
         )
         | Messages -> failwith "shouldn't happen"
@@ -284,7 +287,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
             else
               s ^ "@" ^ st.current_user
             ) in
-            let resp = Client.get_messages st.current_user channel_name o 0 in
+            let resp = Client.get_messages st.current_user channel_name o 0 !server_addr in
             match (fst resp) with
             | "failure" -> (
               (st.message <- "Not a valid switch"); main st
@@ -343,7 +346,7 @@ and login () =
   ANSITerminal.(print_string [Bold; green]
   	"Password: ");
   let password = read_line () in
-  if (login_user username password).status = "success" then (
+  if (login_user username password !server_addr).status = "success" then (
     ANSITerminal.(print_string [Bold; green]
     "Success!\n");
     flush_all ();
@@ -375,7 +378,7 @@ and register () =
   let username = read_line () in
     ANSITerminal.(print_string [Bold; green] "Password: ");
   let password = read_line () in
-  let clientpass = register_user username password in
+  let clientpass = register_user username password !server_addr in
   if clientpass.status = "success" then (
     ANSITerminal.(print_string [Bold; green] "Success!\n");
     flush_all ();
@@ -432,7 +435,7 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
   | Organizations ->
       if c.logged_out then Lwt.return ()
       else
-        let response_json = snd (get_user_organizations c.current_user) in
+        let response_json = snd (get_user_organizations c.current_user !server_addr) in
         (ANSITerminal.(erase Above);
         ANSITerminal.(move_cursor (-100) 0);
         print_persist ();
@@ -447,7 +450,7 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
         match c.current_org with
         | None -> failwith "shouldn't happen"
         | Some o ->
-          let response_json = snd (get_org_info c.current_user o) in
+          let response_json = snd (get_org_info c.current_user o !server_addr) in
           (ANSITerminal.(erase Above);
           ANSITerminal.(move_cursor (-100) 0);
           print_persist ();
@@ -467,7 +470,7 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
           | None -> failwith "shouldn't happen"
           | Some ch ->
             let response_json =
-            snd (get_messages c.current_user ch o c.current_line) in
+            snd (get_messages c.current_user ch o c.current_line !server_addr) in
             (ANSITerminal.(erase Above);
             ANSITerminal.(move_cursor (-100) 0);
             render_channel_messages c.message o ch response_json;
@@ -480,45 +483,57 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
   )
 
 let () =
-  ANSITerminal.resize 80 34;
-	print_string
-"                         MMMMMMM                     MMMMMMMMMMMMMM
-                      MMMMMMMMMMMM                MMMMMMMMMM MMMMMMMM
-                    MMMMMMMMMMMMMMMM                MMMMMMMMMMMMMMMMM
-               MMMMMMMMMMMMMMMMMMMMMM              MMMMMMMMMMMMM   MM
-            MMMMMMMMMMMMMMMMMMMMMMMMMMM            MMMMMMMMMMM
-          MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM        MMMMMMMMMMMM
-        MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM    MMMMMMMMMMMMM
-        MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-       MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-       MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-       MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-      MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-     MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMM  MMMMMMMM  MMMMMMMMMMMMMMMMMMMM
-   MMMMM  M   MMMMMMM       MNMMMMMMMMMMMMMM
- MMMMM  MMMM  MMMMMM          MMMMM  MMMMMM
-MMMMMM  MMM  MMMMMM           MMMMM   MMMMM
-MMMMM     M  MMMMM            MMMM     MMMM
-MMMM        MMMMM           MMMMMM      MMMMM
- MMM       MMMMMMM          NMMMMM      MMMMM
- MM         MMMM             MMMM         MMM
-MMMM         MMMM           MMMM           MM
- MMM          MMM           MMM            MMM
- MMMM         MMMM         MMM              MMM
- MMMMM         MMM        MMMM               MMM
-   MMMMMM      MMMM        MMMM              MMMMMM
-      MMM       MMMMM       MMMM              MMMMMM
-                  MMMMM                        MMMMM
-                    MMMMM";
-  ANSITerminal.(print_string [green]
-    "\n\nHello! and Welcome to Camel Talk.\n");
-  ANSITerminal.(print_string [Bold; blue]
-  	"Would you like to log in or register?");
-  ANSITerminal.(print_string [Bold; blue]
-  	"\nType \"login\" to Log in, or \"register\" to Register\n");
-  ANSITerminal.(print_string [] "> ");
-  (let termio = Unix.tcgetattr Unix.stdin in
-  Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true;
-  Unix.c_echo = true;});
-  if (read_line ()) = "login" then login () else register ()
+  let in_channel = open_in "server_config.txt" in
+  let text = ref "" in
+  try
+    while true do
+      let line = input_line in_channel in
+      text := !text ^ line
+    done
+  with
+  | End_of_file -> begin
+    close_in in_channel;
+    server_addr := !text;
+    ANSITerminal.resize 80 34;
+  	print_string
+  "                         MMMMMMM                     MMMMMMMMMMMMMM
+                        MMMMMMMMMMMM                MMMMMMMMMM MMMMMMMM
+                      MMMMMMMMMMMMMMMM                MMMMMMMMMMMMMMMMM
+                 MMMMMMMMMMMMMMMMMMMMMM              MMMMMMMMMMMMM   MM
+              MMMMMMMMMMMMMMMMMMMMMMMMMMM            MMMMMMMMMMM
+            MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM        MMMMMMMMMMMM
+          MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM    MMMMMMMMMMMMM
+          MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+         MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+         MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+         MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+        MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+       MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+      MMMMMMMM  MMMMMMMM  MMMMMMMMMMMMMMMMMMMM
+     MMMMM  M   MMMMMMM       MNMMMMMMMMMMMMMM
+   MMMMM  MMMM  MMMMMM          MMMMM  MMMMMM
+  MMMMMM  MMM  MMMMMM           MMMMM   MMMMM
+  MMMMM     M  MMMMM            MMMM     MMMM
+  MMMM        MMMMM           MMMMMM      MMMMM
+   MMM       MMMMMMM          NMMMMM      MMMMM
+   MM         MMMM             MMMM         MMM
+  MMMM         MMMM           MMMM           MM
+   MMM          MMM           MMM            MMM
+   MMMM         MMMM         MMM              MMM
+   MMMMM         MMM        MMMM               MMM
+     MMMMMM      MMMM        MMMM              MMMMMM
+        MMM       MMMMM       MMMM              MMMMMM
+                    MMMMM                        MMMMM
+                      MMMMM";
+    ANSITerminal.(print_string [green]
+      "\n\nHello! and Welcome to Camel Talk.\n");
+    ANSITerminal.(print_string [Bold; blue]
+    	"Would you like to log in or register?");
+    ANSITerminal.(print_string [Bold; blue]
+    	"\nType \"login\" to Log in, or \"register\" to Register\n");
+    ANSITerminal.(print_string [] "> ");
+    (let termio = Unix.tcgetattr Unix.stdin in
+    Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with Unix.c_icanon = true;
+    Unix.c_echo = true;});
+    if (read_line ()) = "login" then login () else register ()
+  end
