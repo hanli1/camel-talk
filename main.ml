@@ -241,10 +241,10 @@ let rec main (st : current_state) : (unit Lwt.t) =
         st.current_screen <- Channels;
         main st
     )
-    | CLogout -> Lwt.return ()
-    | CQuit -> st.message <- "Goodbye"; Sys.command "clear";
+    | CQuit -> ( st.message <- "Goodbye"; ignore (Sys.command "clear");
       enable_echo ();
-      exit 0
+      Lwt.return ()
+      )
     | CInvite (user_to_join, orgid) -> (
       let resp = invite user_to_join orgid st.current_user !server_addr in
       (st.message <- resp.message); main st
@@ -343,7 +343,6 @@ let rec main (st : current_state) : (unit Lwt.t) =
       #scrollup, #scrolldown: scrolls the message list up or down respectively.
       #back, #logout, #quit: same as above."
       ); main st
-    | _ -> failwith "unimplemented command"
     )
   )
 
@@ -371,7 +370,7 @@ and login () =
     } in
     run_app_threads st
     )
-  else
+  else (
     ANSITerminal.(print_string [Bold; blue]
   	"\nNot a valid username and password pair\nWant to register? (y/n) Or, type \"exit\" to exit\n");
     ANSITerminal.(print_string [Blink] "> ");
@@ -379,6 +378,7 @@ and login () =
     | "exit" -> exit 0
     | "y" -> register ()
     | _ -> login ()
+  )
 
 
 and register () =

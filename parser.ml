@@ -11,7 +11,6 @@ type command =
   | CHelp
   | CBack
   | CIllegal
-  | CLogout
   | CQuit
   | CInvite of string * string
   | CScrollUp
@@ -147,7 +146,6 @@ let text_to_message str screen=
   if str = "" then CIllegal
   else if str = "#back" then CBack
   else if str = "#help" then CHelp
-  else if str = "#logout" then CLogout
   else if str = "#scrollup" then CScrollUp
   else if str = "#scrolldown" then CScrollDown
   else if str = "#quit" then CQuit

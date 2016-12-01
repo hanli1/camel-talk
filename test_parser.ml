@@ -18,8 +18,8 @@ let org_screen_tests = [
   "invalid leave" >:: (fun _ -> assert_equal (CIllegal) (text_to_message "#leave org1" Organizations));
 
 
-  "valid logout" >:: (fun _ -> assert_equal (CLogout) (text_to_message "#logout" Organizations));
-  "invalid logout" >:: (fun _ -> assert_equal (CSwitch "#logout org1") (text_to_message "#logout org1" Organizations));
+  "valid quit" >:: (fun _ -> assert_equal (CQuit) (text_to_message "#quit" Organizations));
+  "invalid quit" >:: (fun _ -> assert_equal (CSwitch "#quit org1") (text_to_message "#quit org1" Organizations));
   "valid back" >:: (fun _ -> assert_equal (CBack) (text_to_message "#back" Organizations));
   "valid help" >:: (fun _ -> assert_equal (CHelp) (text_to_message "#help" Organizations));
 ]
