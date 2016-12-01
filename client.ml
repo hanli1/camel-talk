@@ -9,9 +9,7 @@ type response = {
   message: string
 }
 
-let server_address _ =
-  "http://97cdbffd.ngrok.io/"
-  (* "http://127.0.0.1:8000/" *)
+
 
 let login_user usern passw server_addr=
   let resp = Client.post (Uri.of_string (server_addr ^ "login_user"))
