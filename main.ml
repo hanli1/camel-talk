@@ -49,14 +49,6 @@ let escape_str s =
      s
 
 (**
- * [enable_echo] enables the user to see what they are typing currently
- *)
-let enable_echo _ =
-  let termio = Unix.tcgetattr Unix.stdin in
-      Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with
-      Unix.c_icanon = true; Unix.c_echo = true}
-
-(**
  * [check_special c] checks to see if char [c] is a possible pecial arrow
  * character, and then mutates the stack to get rid of string if needed
  *)
@@ -242,7 +234,6 @@ let rec main (st : current_state) : (unit Lwt.t) =
         main st
     )
     | CQuit -> ( st.message <- "Goodbye"; ignore (Sys.command "clear");
-      enable_echo ();
       Lwt.return ()
       )
     | CInvite (user_to_join, orgid) -> (
