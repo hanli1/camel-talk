@@ -22,3 +22,5 @@ test_data:
 	ocamlbuild -pkgs extlib,str,unix,oUnit test_dataOperations.byte && ./test_dataOperations.byte
 test_parser:
 	ocamlbuild -pkgs extlib,str,unix,oUnit test_parser.byte && ./test_parser.byte
+testcs:
+	ocamlbuild -pkgs extlib,str,unix,oUnit,yojson,cohttp.lwt test_clientserver.byte && ./test_clientserver.byte
