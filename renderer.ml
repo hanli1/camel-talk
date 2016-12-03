@@ -1,6 +1,5 @@
 open Unix
 open Str
-
 (**
  * convert json into a list of jsons
  *)
@@ -217,7 +216,7 @@ let render_message msg =
   end
   else begin
     print_meta_data user_id time_stamp;
-    ANSITerminal.(print_string [] (get_member_string mess "content"));
+    ANSITerminal.(print_string [] ((get_member_string mess "id") ^ " " ^ (get_member_string mess "content")));
     print_newline ();
     print_votes (get_member_list mess "options");
     print_newline ()

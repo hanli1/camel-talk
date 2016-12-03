@@ -1,7 +1,7 @@
-type message_body =   
+type message_body =
   | SimpleMessage of string
   | ReminderMessage of string * int
-  | PollMessage of string * ((string * int) list)
+  | PollMessage of string * string * ((string * int) list)
 
 type message = {
   user_id : string;
@@ -167,10 +167,10 @@ let read_data () : t =
                 | _ -> failwith "badly formed ReminderMessage"
               ) else if mtype = "PollMessage" then (
                 match binfo with
-                | text::optvotes::[] ->
+                | id::text::optvotes::[] ->
                   let optvotelist = field_to_values optvotes in
                   let optvotepairs = List.map
-                    (fun ovl -> 
+                    (fun ovl ->
                       let pipe = String.index ovl '|' in
                       let opt = String.sub ovl 0 pipe in
                       let num = String.sub ovl (pipe+1)
@@ -179,7 +179,7 @@ let read_data () : t =
                     )
                     optvotelist
                   in
-                  PollMessage (text, optvotepairs)
+                  PollMessage (id, text, optvotepairs)
                 | _ -> failwith "badly formed PollMessage"
               ) else (
                 failwith "badly formed message type"
@@ -271,7 +271,7 @@ let backup_data data =
   try (
     let write_users users =
       let users_fh = open_out "database/users.txt" in
-      DynArray.iter 
+      DynArray.iter
         (fun u -> let username = u.username_mut in
                   let password = u.password_mut in
                   output_string users_fh (username^"\t"^password^"\n"))
@@ -286,12 +286,12 @@ let backup_data data =
         | SimpleMessage text -> "SimpleMessage\t"^text
         | ReminderMessage (text, time) ->
           "ReminderMessage\t"^text^"\t"^(string_of_int time)
-        | PollMessage (text, optlist) ->
+        | PollMessage (id, text, optlist) ->
           let optstringlist =
             List.map (fun (o,v) -> o^"|"^(string_of_int v)) optlist
           in
           let optstring = (String.concat ";" optstringlist)^";" in
-          "PollMessage\t"^text^"\t"^optstring
+          "PollMessage\t"^ id ^ "\t" ^text^"\t"^optstring
       in
       common_data^"\t"^specific_data^"\n"
     in
@@ -367,8 +367,8 @@ let get_org_data data orgname =
   try (
     let org = get_org data.organizations orgname in
     let org_channels =
-      org.channels_mut 
-      |> DynArray.to_list 
+      org.channels_mut
+      |> DynArray.to_list
       |> List.map (fun (c : channel_mutable) -> c.name_mut)
     in
     Some {
@@ -398,7 +398,7 @@ let get_recent_msg data orgname channame s num =
     let end_idx = max 0 ((DynArray.length chan.messages_mut)-s) in
     let start = max 0 (end_idx-num) in
     let len = end_idx-start in
-    Some (List.rev (DynArray.to_list 
+    Some (List.rev (DynArray.to_list
           (DynArray.sub chan.messages_mut start len)))
   ) with Not_found -> None
 
@@ -474,7 +474,7 @@ let vote_poll data oname cname pname op =
 
     let is_poll p m =
       match m.body with
-      | PollMessage (name, _) -> name=p
+      | PollMessage (id, _, _) -> id=p
       | _ -> false
     in
 
@@ -483,7 +483,7 @@ let vote_poll data oname cname pname op =
 
     let rec increment_opt opts opt =
       match opts with
-      | [] -> raise Not_found
+      | [] -> print_endline "OMG 1"; flush_all(); raise Not_found
       | (name,votes)::t ->
         if name = opt then (name, votes+1)::t
         else (name,votes)::(increment_opt t opt)
@@ -491,14 +491,14 @@ let vote_poll data oname cname pname op =
 
     let new_msg_body =
       match msg.body with
-      | PollMessage (pid, opts) -> PollMessage (pid, increment_opt opts op)
-      | _ -> raise Not_found
+      | PollMessage (id, pmes, opts) -> PollMessage (id, pmes, increment_opt opts op)
+      | _ -> print_endline "OMG 2"; flush_all(); raise Not_found
     in
 
     let new_msg = {msg with body=new_msg_body} in
     DynArray.set chan.messages_mut midx new_msg;
     true
-  ) with Not_found -> false
+  ) with Not_found -> print_endline "OMG 3"; flush_all(); false
 
 let add_channel data oname cname pub =
   let org = get_org data.organizations oname in
@@ -616,7 +616,7 @@ let flush_reminders data =
 
   let flush_channel (chan : channel_mutable) : unit =
     let due_reminders = List.filter is_due chan.reminders_mut in
-    let pending_reminders = List.filter (fun r -> not (is_due r)) 
+    let pending_reminders = List.filter (fun r -> not (is_due r))
                                         chan.reminders_mut
     in
     chan.reminders_mut <- pending_reminders;

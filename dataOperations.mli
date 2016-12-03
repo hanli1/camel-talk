@@ -1,11 +1,11 @@
-(** 
+(**
  * Value of type message_body contains constructors for the different types of
  * message bodies.
  *)
-type message_body =   
+type message_body =
   | SimpleMessage of string
   | ReminderMessage of string * int
-  | PollMessage of string * ((string * int) list)
+  | PollMessage of string * string * ((string * int) list)
 
 (**
  * Value of type message contains the message body as well as user, channel,
@@ -17,7 +17,7 @@ type message = {
   body : message_body;
 }
 
-(** 
+(**
  * Value of type channel represents the data associated with a single channel
  *)
 type channel = {
@@ -27,7 +27,7 @@ type channel = {
   is_public : bool;
 }
 
-(** 
+(**
  * Value of type user represents the data associated with a single user
  *)
 type user = {
@@ -35,7 +35,7 @@ type user = {
   password : string;
 }
 
-(** 
+(**
  * Value of type organization represents the data associated with a single
  * organization
  *)
@@ -52,13 +52,13 @@ type t
 (** [make_data ()] is am empty data store, with no users or organizations. *)
 val make_data : unit -> t
 
-(** 
+(**
  * [load_data ()] extracts a data structure from the data store and returns
  * its representation type.
  *)
 val load_data : unit -> t
 
-(** 
+(**
  * [backup_data t] updates the data store based on the representation type
  * t. Returns true or false indicating success or failure.
  *)
@@ -76,21 +76,21 @@ val get_org_list : t -> string list
 (** [get_org_data t o] is the org data for organization with name [o]. *)
 val get_org_data : t -> string -> organization option
 
-(** 
+(**
  * [get_channel_data o c] is the channel data for channel with name c
  * in organization with name o.
  *)
 val get_channel_data : t -> string -> string -> channel option
 
 (**
- * [get_recent_msg o c t x n] fetches [n] messages starting at the [x]th most 
+ * [get_recent_msg o c t x n] fetches [n] messages starting at the [x]th most
  * recent messages, 0-indexed at channel [c] in organization [o]. The most
- * recent message is at index 0. The messages are returned in order from most 
+ * recent message is at index 0. The messages are returned in order from most
  * recent to least recent.
  *)
 val get_recent_msg : t -> string -> string -> int -> int -> message list option
 
-(** 
+(**
  * [add_user t u p] mutates t to include user with username u and password p.
  *)
 val add_user : t -> string -> string -> bool
@@ -108,7 +108,7 @@ val add_user_org : t -> string -> string -> bool
 val remove_user_org : t -> string -> string -> bool
 
 (**
- * [add_message t org chan uid msg_body] adds message with attributes org, 
+ * [add_message t org chan uid msg_body] adds message with attributes org,
  * cha, uid to [t].
  *)
 val add_message : t -> string -> string -> string -> message_body -> bool
