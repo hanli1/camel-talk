@@ -1,7 +1,7 @@
 (**
  * Values of type command represent user commands to the REPL.
  * CCreate - Creates an organization or public channel from the given string
- * CDelete - Deletes an organization or public channel specified by given 
+ * CDelete - Deletes an organization or public channel specified by given
  * string
  * CSwitch - Switch into the given organization or channel
  * CSimpleMessage - Sends a simple message (regular text)
@@ -31,7 +31,6 @@ type command =
   | CHelp
   | CBack
   | CIllegal
-  | CLogout
   | CQuit
   | CInvite of string * string
   | CScrollUp

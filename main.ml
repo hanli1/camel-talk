@@ -88,7 +88,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
       (
       match st.current_screen with
       | Organizations -> (
-          (Client.create_organization st.current_user s !server_addr) 
+          (Client.create_organization st.current_user s !server_addr)
           >>= (fun r ->
           (st.message <- r.message); main st)
       )
@@ -105,7 +105,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | CDelete s -> (
       match st.current_screen with
       | Organizations ->
-          (Client.delete_organization st.current_user s !server_addr) 
+          (Client.delete_organization st.current_user s !server_addr)
           >>= (fun r ->
           (st.message <- r.message);
           (
@@ -143,7 +143,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | CSwitch s -> (
       match st.current_screen with
       | Organizations -> (
-          (Client.get_org_info st.current_user s !server_addr) 
+          (Client.get_org_info st.current_user s !server_addr)
           >>= fun (stat,r) ->
           match stat with
           | "failure" -> (
@@ -239,8 +239,9 @@ let rec main (st : current_state) : (unit Lwt.t) =
         st.current_screen <- Channels;
         main st
     )
-    | CLogout -> Lwt.return ()
-    | CQuit -> st.message <- "Goodbye"; Lwt_unix.sleep 0.1 >>= (fun () -> exit 0)
+    | CQuit -> ( st.message <- "Goodbye"; ignore (Sys.command "clear");
+      Lwt.return ()
+      )
     | CInvite (user_to_join, orgid) -> (
       (invite user_to_join orgid st.current_user !server_addr) >>=
       fun r -> (st.message <- r.message); main st
@@ -274,7 +275,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
             else
               s ^ "@" ^ st.current_user
             ) in
-            (Client.create_channel st.current_user o channel_name !server_addr) 
+            (Client.create_channel st.current_user o channel_name !server_addr)
             >>=
             (fun r -> (st.message <- r.message); main st)
         )
@@ -295,7 +296,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
             else
               s ^ "@" ^ st.current_user
             ) in
-            (Client.get_messages st.current_user channel_name o 0 !server_addr) 
+            (Client.get_messages st.current_user channel_name o 0 !server_addr)
             >>= fun (stat, r) ->
             match stat with
             | "failure" -> (
@@ -342,7 +343,6 @@ let rec main (st : current_state) : (unit Lwt.t) =
       #scrollup, #scrolldown: scrolls the message list up or down respectively.
       #back, #logout, #quit: same as above."
       ); main st
-    | _ -> failwith "unimplemented command"
     )
   )
 
@@ -369,18 +369,18 @@ and login () =
        current_line = 0;
        message = "Hello, "^username^". Type \"#help\" to see commands."
     } in
-    run_app_threads st
+    return (run_app_threads st)
     )
   else
+  (
     ANSITerminal.(print_string [Bold; blue]
   	"\nNot a valid username and password pair\nWant to register? (y/n) Or, type \"exit\" to exit\n");
     ANSITerminal.(print_string [Blink] "> ");
     match read_line () with
-    | "exit" -> exit 0
+    | "exit" -> return (ignore (exit 0))
     | "y" -> register ()
     | _ -> login ()
-  
-
+  )
 
 and register () =
   ANSITerminal.(print_string [Bold; blue]
@@ -389,7 +389,7 @@ and register () =
   let username = read_line () in
     ANSITerminal.(print_string [Bold; green] "Password: ");
   let password = read_line () in
-  (register_user username password !server_addr) >>= (fun r ->
+  let r = Lwt_main.run (register_user username password !server_addr) in
   if r.status = "success" then (
     ANSITerminal.(print_string [Bold; green] "Success!\n");
     flush_all ();
@@ -402,9 +402,9 @@ and register () =
        current_line = 0;
        message = "Hello, "^username^". Type \"#help\" to see commands."
     } in
-    run_app_threads st
+    return (run_app_threads st)
   )
-  else
+  else (
     ANSITerminal.(print_string [Bold; blue]
       "An error occured. Please register again.");
     register ()
