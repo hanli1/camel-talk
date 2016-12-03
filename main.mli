@@ -25,13 +25,13 @@ val draw_update : current_state -> unit Lwt.t
  * Prompts the user to enter in username and password information as the
  * first thing when the program is run.
  *)
-val login : unit -> unit
+val login : unit -> unit Lwt.t
 
 (*
  * User has a choice to also register and stores account information in
  * the server
  *)
-val register : unit -> unit
+val register : unit -> unit Lwt.t
 
 (*
  * Contains the REPL
