@@ -71,9 +71,9 @@ let parse_message_string str =
       let reminder = String.sub text (second_space_index + 1) (text_length -
       second_space_index - 1) in
       try
-      let dur = int_of_string duration in
+      let time = (int_of_string duration) * 60 + (int_of_float (Unix.time())) in
       if reminder <> "" then
-      CReminderMessage (reminder, dur)
+      CReminderMessage (reminder, time)
       else
       CIllegal
       with
