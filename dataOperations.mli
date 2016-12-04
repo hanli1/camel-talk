@@ -1,6 +1,11 @@
 (**
  * Value of type message_body contains constructors for the different types of
  * message bodies.
+ *
+ * Formats:
+ * SimpleMessage [text]
+ * ReminderMessage ([text], [time])
+ * PollMessage ([id], [question], [(option1, votes1), ..., (optionx, votesx)])
  *)
 type message_body =
   | SimpleMessage of string
@@ -8,8 +13,8 @@ type message_body =
   | PollMessage of string * string * ((string * int) list)
 
 (**
- * Value of type message contains the message body as well as user, channel,
- * and organization.
+ * Value of type message contains the sending user, the timestamp, and the
+ * message body.
  *)
 type message = {
   user_id : string;
@@ -18,7 +23,9 @@ type message = {
 }
 
 (**
- * Value of type channel represents the data associated with a single channel
+ * Value of type channel represents the data associated with a single channel:
+ * the name of the channel, the number of messages, the users in that channel
+ * (relevant to private channels) and whether the channel is public.
  *)
 type channel = {
   name : string;
@@ -28,7 +35,8 @@ type channel = {
 }
 
 (**
- * Value of type user represents the data associated with a single user
+ * Value of type user represents the data associated with a single user, which
+ * is simply the username and password.
  *)
 type user = {
   username : string;
@@ -37,7 +45,8 @@ type user = {
 
 (**
  * Value of type organization represents the data associated with a single
- * organization
+ * organization: its name, the list of channels names within it, the list
+ * of users in the organization, and the admin.
  *)
 type organization = {
   name : string;
@@ -46,7 +55,7 @@ type organization = {
   admin : string;
 }
 
-(** The representation type of the data store. *)
+(** The type of the in-memory data store. *)
 type t
 
 (** [make_data ()] is am empty data store, with no users or organizations. *)
@@ -67,18 +76,25 @@ val backup_data : t -> bool
 (** [get_user_list t] is the list of user_ids. *)
 val get_user_list : t -> string list
 
-(** [get_user_data t uid] is the user data for user with user_id [uid]. *)
+(**
+ * [get_user_data t uid] is the user data for user with user_id [uid],
+ * returned as an option. None if this user does not exist.
+ *)
 val get_user_data : t -> string -> user option
 
 (** [get_org_list t] is the list of organization names. *)
 val get_org_list : t -> string list
 
-(** [get_org_data t o] is the org data for organization with name [o]. *)
+(**
+ * [get_org_data t o] is the data for organization with name [o]. 
+ * Returned as an option. None if this organization does not exist.
+ *)
 val get_org_data : t -> string -> organization option
 
 (**
  * [get_channel_data o c] is the channel data for channel with name c
- * in organization with name o.
+ * in organization with name o, returned as an option. None if the
+ * channel does not eist in that organization.
  *)
 val get_channel_data : t -> string -> string -> channel option
 
@@ -90,12 +106,10 @@ val get_channel_data : t -> string -> string -> channel option
  *)
 val get_recent_msg : t -> string -> string -> int -> int -> message list option
 
-(**
- * [add_user t u p] mutates t to include user with username u and password p.
- *)
+(** [add_user t u p] adds a user with username [u] and password [p]. *)
 val add_user : t -> string -> string -> bool
 
-(** [remove_user t u] removes user [u] from t. His messages stay intact. *)
+(** [remove_user t u] removes user [u] from t. [u]'s messages stay intact. *)
 val remove_user : t -> string -> bool
 
 (** [change_user_pass t u p] changes user [u]'s password to [p]. *)
@@ -108,20 +122,25 @@ val add_user_org : t -> string -> string -> bool
 val remove_user_org : t -> string -> string -> bool
 
 (**
- * [add_message t org chan uid msg_body] adds message with attributes org,
- * cha, uid to [t].
+ * [add_message t org chan uid msg_body] adds a message with user [uid],
+ * and body [msg_body] to channel [chan] in organization [org]. The
+ * timestamp is the time that this function is applied.
+ *
+ * Special note: When sending a PollMessage, the id field can be any
+ * arbitrary string. It will be replaced with the autoincremented poll id
+ * before being added to the channel's messages.
  *)
 val add_message : t -> string -> string -> string -> message_body -> bool
 
 (**
- * [vote_poll t o c p op] increments option [op] of poll with name [p] in
- * channel with name [c] in organization with name [o] vote count by 1.
+ * [vote_poll t o c id op] increments option [op] of poll with id [id] in
+ * channel with name [c] in organization with name [o].
  *)
 val vote_poll : t -> string -> string -> string -> string -> bool
 
 (**
  * [add_channel t o c pub] adds channel [c] to organization [o]. [pub] is true
- * if this channel is public, false otherwise.
+ * if this channel is public, false if private.
  *)
 val add_channel : t -> string -> string -> bool -> bool
 
@@ -142,10 +161,15 @@ val add_org : t -> string -> string -> bool
 (** [remove_org t o] removes organization [o]. *)
 val remove_org : t -> string -> bool
 
-(** [add_reminder t o c content time] sets a reminder [content] for time
- *  [time] in organizaiton [o], channel [c]. *)
+(**
+ * [add_reminder t o c content time] sets a reminder [content] for time
+ * [time] in organizaiton [o], channel [c].
+ *)
 val add_reminder : t -> string -> string -> string -> int -> bool
 
-(** [flush_reminders ()] removes any reminders that exceed their reminder
- *  time and send their corresponding message to the channel. *)
+(**
+ * [flush_reminders ()] removes any reminders that exceed their reminder
+ * time and sends their corresponding message to the channel as a
+ * ReminderMessage.
+ *)
 val flush_reminders : t -> bool

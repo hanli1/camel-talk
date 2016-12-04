@@ -34,6 +34,7 @@ type channel_mutable = {
   mutable users_mut : string list;
   is_public_mut : bool;
   mutable reminders_mut : (string * int) list;
+  mutable latest_pollid_mut : int;
 }
 
 type user_mutable = {
@@ -52,6 +53,7 @@ type t = {
   users : user_mutable DynArray.t;
   organizations : organization_mutable DynArray.t;
 }
+
 (******************************************************************************)
 (*                              Helper Functions                              *)
 (******************************************************************************)
@@ -131,9 +133,9 @@ let read_data () : t =
 
   let add_channel fh channels =
     let channel_info = line_to_fields (input_line fh) in
-    let (name, is_public, users, reminders) =
+    let (name, is_public, users, reminders, latest_pollid) =
       match channel_info with
-      | n::p::us::rem::[] ->
+      | n::p::us::rem::latest_pollid::[] ->
         let rem_list = field_to_values rem in
         let rem_pairs = List.map
           (fun rem ->
@@ -145,7 +147,7 @@ let read_data () : t =
           )
           rem_list
         in
-        (n, bool_of_string p, field_to_values us, rem_pairs)
+        (n, bool_of_string p, field_to_values us, rem_pairs, latest_pollid)
       | _ -> failwith "badly formed channel info"
     in
     let done_iter = ref false in
@@ -199,6 +201,7 @@ let read_data () : t =
       users_mut=users;
       messages_mut=messages;
       reminders_mut=reminders;
+      latest_pollid_mut=(int_of_string latest_pollid);
     }
   in
 
@@ -291,7 +294,7 @@ let backup_data data =
             List.map (fun (o,v) -> o^"|"^(string_of_int v)) optlist
           in
           let optstring = (String.concat ";" optstringlist)^";" in
-          "PollMessage\t"^ id ^ "\t" ^text^"\t"^optstring
+          "PollMessage\t" ^ id ^ "\t" ^ text ^ "\t" ^ optstring
       in
       common_data^"\t"^specific_data^"\n"
     in
@@ -308,6 +311,7 @@ let backup_data data =
         string_of_bool chan.is_public_mut;
         (String.concat ";" chan.users_mut)^";";
         (String.concat ";" remstringlist)^";";
+        string_of_int chan.latest_pollid_mut;
       ]) ^ "\n"
       in
       let chan_fh = open_out chan_fname in
@@ -455,10 +459,18 @@ let add_message data oname cname uid msg_body =
     let org = get_org data.organizations oname in
     if List.mem uid org.users_mut then
       let chan = get_chan org.channels_mut cname in
+      let new_msg_body = (
+        match msg_body with
+        | PollMessage (_, text, opts) ->
+          chan.latest_pollid_mut <- chan.latest_pollid_mut + 1;
+          PollMessage ((string_of_int chan.latest_pollid_mut), text, opts)
+        | _ -> msg_body
+      )
+      in
       let new_message = {
         user_id=uid;
         timestamp=int_of_float (Unix.time ());
-        body=msg_body;
+        body=new_msg_body;
       }
       in
       DynArray.add chan.messages_mut new_message;
@@ -483,7 +495,7 @@ let vote_poll data oname cname pname op =
 
     let rec increment_opt opts opt =
       match opts with
-      | [] -> print_endline "OMG 1"; flush_all(); raise Not_found
+      | [] -> raise Not_found
       | (name,votes)::t ->
         if name = opt then (name, votes+1)::t
         else (name,votes)::(increment_opt t opt)
@@ -492,13 +504,13 @@ let vote_poll data oname cname pname op =
     let new_msg_body =
       match msg.body with
       | PollMessage (id, pmes, opts) -> PollMessage (id, pmes, increment_opt opts op)
-      | _ -> print_endline "OMG 2"; flush_all(); raise Not_found
+      | _ -> raise Not_found
     in
 
     let new_msg = {msg with body=new_msg_body} in
     DynArray.set chan.messages_mut midx new_msg;
     true
-  ) with Not_found -> print_endline "OMG 3"; flush_all(); false
+  ) with Not_found -> false
 
 let add_channel data oname cname pub =
   let org = get_org data.organizations oname in
@@ -512,6 +524,7 @@ let add_channel data oname cname pub =
       users_mut=[];
       is_public_mut=pub;
       reminders_mut=[];
+      latest_pollid_mut=0;
     }
     in
     DynArray.add org.channels_mut new_channel;

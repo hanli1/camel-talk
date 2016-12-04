@@ -10,14 +10,6 @@ open Str
  *)
 let all_data = load_data ()
 
-let next_val =
-  let counter = ref 0
-  in fun () ->
-    incr counter;
-    !counter
-
-let poll_mappings = ref []
-
 type response_record = {
   status_code : int;
   response_body : string;
@@ -169,10 +161,9 @@ let send_message_api request =
           let options_list = List.map (fun option_json -> (option_json |>
           member "option" |> to_string, option_json |> member "count" |>
           to_int)) (json_body |> member "message" |> member "options" |>
-          to_list) in
-          let new_id = string_of_int (next_val ()) in
-          poll_mappings := (new_id, content)::(!poll_mappings);
-          PollMessage (new_id, content, options_list)
+          to_list)
+          in
+          PollMessage ("0", content, options_list)
         else
           raise (Failure "Wrong format for the body of this request")
         in
@@ -364,7 +355,6 @@ let vote_poll_api request =
       let organization_id = json_body |> member "organization_id" |> to_string in
       let channel_id = json_body |> member "channel_id" |> to_string in
       let poll_id = json_body |> member "poll_id" |> to_string in
-      (* let actual_poll_id = List.assoc poll_id !poll_mappings in *)
       let choice_id = json_body |> member "choice_id" |> to_string in
       let res = vote_poll all_data organization_id channel_id poll_id choice_id in
       if res = true then {status_code=200; response_body="{\"status\":\"success\",\"message\"" ^
