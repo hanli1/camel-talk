@@ -53,18 +53,18 @@ let serialize_message m =
     | ReminderMessage (c,timestamp) ->
       "{\"content\":\"" ^ c ^ "\", \"time\":\"" ^ (string_of_int timestamp) ^
       "\"}"
-    | PollMessage (c, options_list) ->
+    | PollMessage (id, c, options_list) ->
       let string_options_list = List.map (fun option_pair -> "{\"option\":\"" ^
       (fst option_pair) ^ "\",\"count\":" ^ (string_of_int (snd option_pair))
       ^ "}") options_list in
-      "{\"content\":\"" ^ c ^ "\", \"options\":" ^ "[" ^ (String.concat ","
+      "{\"id\":\"" ^ id ^ "\", \"content\":\"" ^ c ^ "\", \"options\":" ^ "[" ^ (String.concat ","
       string_options_list) ^ "]}"
   in
   let message_type =
     match m.body with
     | SimpleMessage c -> "simple"
     | ReminderMessage (c,timestamp) -> "reminder"
-    | PollMessage (c, options_list) -> "poll"
+    | PollMessage (id, c, options_list) -> "poll"
   in
   "{\"message\":" ^ message_json_string ^ "," ^ "\"message_type\":\"" ^
   message_type ^ "\"," ^ "\"user_id\":\"" ^ m.user_id ^ "\"," ^
@@ -150,10 +150,10 @@ let send_message_api request =
           let _ = add_reminder all_data organization_id channel_id content
                                reminder_time
           in
-          let minutes = int_of_float (((float_of_int reminder_time) -. 
+          let minutes = int_of_float (((float_of_int reminder_time) -.
                                      (Unix.time ())) /. 60.)
           in
-          SimpleMessage ("I've set a reminder in " ^ (string_of_int minutes) ^ 
+          SimpleMessage ("I've set a reminder in " ^ (string_of_int minutes) ^
                          " minutes: " ^ content)
         else if message_type = "poll" then
           let content = json_body |> member "message" |> member "content" |>
@@ -161,8 +161,9 @@ let send_message_api request =
           let options_list = List.map (fun option_json -> (option_json |>
           member "option" |> to_string, option_json |> member "count" |>
           to_int)) (json_body |> member "message" |> member "options" |>
-          to_list) in
-          PollMessage (content, options_list)
+          to_list)
+          in
+          PollMessage ("0", content, options_list)
         else
           raise (Failure "Wrong format for the body of this request")
         in

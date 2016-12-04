@@ -1,7 +1,7 @@
-type message_body =   
+type message_body =
   | SimpleMessage of string
   | ReminderMessage of string * int
-  | PollMessage of string * ((string * int) list)
+  | PollMessage of string * string * ((string * int) list)
 
 type message = {
   user_id : string;
@@ -34,6 +34,7 @@ type channel_mutable = {
   mutable users_mut : string list;
   is_public_mut : bool;
   mutable reminders_mut : (string * int) list;
+  mutable latest_pollid_mut : int;
 }
 
 type user_mutable = {
@@ -52,6 +53,7 @@ type t = {
   users : user_mutable DynArray.t;
   organizations : organization_mutable DynArray.t;
 }
+
 (******************************************************************************)
 (*                              Helper Functions                              *)
 (******************************************************************************)
@@ -131,9 +133,9 @@ let read_data () : t =
 
   let add_channel fh channels =
     let channel_info = line_to_fields (input_line fh) in
-    let (name, is_public, users, reminders) =
+    let (name, is_public, users, reminders, latest_pollid) =
       match channel_info with
-      | n::p::us::rem::[] ->
+      | n::p::us::rem::latest_pollid::[] ->
         let rem_list = field_to_values rem in
         let rem_pairs = List.map
           (fun rem ->
@@ -145,7 +147,7 @@ let read_data () : t =
           )
           rem_list
         in
-        (n, bool_of_string p, field_to_values us, rem_pairs)
+        (n, bool_of_string p, field_to_values us, rem_pairs, latest_pollid)
       | _ -> failwith "badly formed channel info"
     in
     let done_iter = ref false in
@@ -167,10 +169,10 @@ let read_data () : t =
                 | _ -> failwith "badly formed ReminderMessage"
               ) else if mtype = "PollMessage" then (
                 match binfo with
-                | text::optvotes::[] ->
+                | id::text::optvotes::[] ->
                   let optvotelist = field_to_values optvotes in
                   let optvotepairs = List.map
-                    (fun ovl -> 
+                    (fun ovl ->
                       let pipe = String.index ovl '|' in
                       let opt = String.sub ovl 0 pipe in
                       let num = String.sub ovl (pipe+1)
@@ -179,7 +181,7 @@ let read_data () : t =
                     )
                     optvotelist
                   in
-                  PollMessage (text, optvotepairs)
+                  PollMessage (id, text, optvotepairs)
                 | _ -> failwith "badly formed PollMessage"
               ) else (
                 failwith "badly formed message type"
@@ -199,6 +201,7 @@ let read_data () : t =
       users_mut=users;
       messages_mut=messages;
       reminders_mut=reminders;
+      latest_pollid_mut=(int_of_string latest_pollid);
     }
   in
 
@@ -271,7 +274,7 @@ let backup_data data =
   try (
     let write_users users =
       let users_fh = open_out "database/users.txt" in
-      DynArray.iter 
+      DynArray.iter
         (fun u -> let username = u.username_mut in
                   let password = u.password_mut in
                   output_string users_fh (username^"\t"^password^"\n"))
@@ -286,12 +289,12 @@ let backup_data data =
         | SimpleMessage text -> "SimpleMessage\t"^text
         | ReminderMessage (text, time) ->
           "ReminderMessage\t"^text^"\t"^(string_of_int time)
-        | PollMessage (text, optlist) ->
+        | PollMessage (id, text, optlist) ->
           let optstringlist =
             List.map (fun (o,v) -> o^"|"^(string_of_int v)) optlist
           in
           let optstring = (String.concat ";" optstringlist)^";" in
-          "PollMessage\t"^text^"\t"^optstring
+          "PollMessage\t" ^ id ^ "\t" ^ text ^ "\t" ^ optstring
       in
       common_data^"\t"^specific_data^"\n"
     in
@@ -308,6 +311,7 @@ let backup_data data =
         string_of_bool chan.is_public_mut;
         (String.concat ";" chan.users_mut)^";";
         (String.concat ";" remstringlist)^";";
+        string_of_int chan.latest_pollid_mut;
       ]) ^ "\n"
       in
       let chan_fh = open_out chan_fname in
@@ -367,8 +371,8 @@ let get_org_data data orgname =
   try (
     let org = get_org data.organizations orgname in
     let org_channels =
-      org.channels_mut 
-      |> DynArray.to_list 
+      org.channels_mut
+      |> DynArray.to_list
       |> List.map (fun (c : channel_mutable) -> c.name_mut)
     in
     Some {
@@ -398,7 +402,7 @@ let get_recent_msg data orgname channame s num =
     let end_idx = max 0 ((DynArray.length chan.messages_mut)-s) in
     let start = max 0 (end_idx-num) in
     let len = end_idx-start in
-    Some (List.rev (DynArray.to_list 
+    Some (List.rev (DynArray.to_list
           (DynArray.sub chan.messages_mut start len)))
   ) with Not_found -> None
 
@@ -407,9 +411,13 @@ let add_user data uid p =
     let _ = DynArray.index_of (fun u -> u.username_mut = uid) data.users in
     false
   ) with Not_found -> (
-    let new_user = {username_mut=uid; password_mut=p} in
-    DynArray.add data.users new_user;
-    true
+    if (not (String.contains uid ';')) then (
+      let new_user = {username_mut=uid; password_mut=p} in
+      DynArray.add data.users new_user;
+      true
+    ) else (
+      false
+    )
   )
 
 let remove_user data uid =
@@ -455,10 +463,24 @@ let add_message data oname cname uid msg_body =
     let org = get_org data.organizations oname in
     if List.mem uid org.users_mut then
       let chan = get_chan org.channels_mut cname in
+      let new_msg_body = (
+        match msg_body with
+        | PollMessage (_, text, opts) ->
+          if (List.exists (fun (o, _) -> (String.contains o ';')
+                                         || (String.contains o '|')) opts)
+          then (
+            raise Not_found
+          ) else (
+            chan.latest_pollid_mut <- chan.latest_pollid_mut + 1;
+            PollMessage ((string_of_int chan.latest_pollid_mut), text, opts)
+          )
+        | _ -> msg_body
+      )
+      in
       let new_message = {
         user_id=uid;
         timestamp=int_of_float (Unix.time ());
-        body=msg_body;
+        body=new_msg_body;
       }
       in
       DynArray.add chan.messages_mut new_message;
@@ -474,7 +496,7 @@ let vote_poll data oname cname pname op =
 
     let is_poll p m =
       match m.body with
-      | PollMessage (name, _) -> name=p
+      | PollMessage (id, _, _) -> id=p
       | _ -> false
     in
 
@@ -491,7 +513,8 @@ let vote_poll data oname cname pname op =
 
     let new_msg_body =
       match msg.body with
-      | PollMessage (pid, opts) -> PollMessage (pid, increment_opt opts op)
+      | PollMessage (id, pmes, opts) ->
+        PollMessage (id, pmes, increment_opt opts op)
       | _ -> raise Not_found
     in
 
@@ -512,6 +535,7 @@ let add_channel data oname cname pub =
       users_mut=[];
       is_public_mut=pub;
       reminders_mut=[];
+      latest_pollid_mut=0;
     }
     in
     DynArray.add org.channels_mut new_channel;
@@ -590,10 +614,14 @@ let remove_org data orgname =
 
 let add_reminder data oname cname content time =
   try (
-    let org = get_org data.organizations oname in
-    let chan = get_chan org.channels_mut cname in
-    chan.reminders_mut <- (content, time)::chan.reminders_mut;
-    true
+    if (String.contains content ';' || String.contains content '|') then (
+      raise Not_found
+    ) else (
+      let org = get_org data.organizations oname in
+      let chan = get_chan org.channels_mut cname in
+      chan.reminders_mut <- (content, time)::chan.reminders_mut;
+      true
+    )
   ) with Not_found -> false
 
 
@@ -616,7 +644,7 @@ let flush_reminders data =
 
   let flush_channel (chan : channel_mutable) : unit =
     let due_reminders = List.filter is_due chan.reminders_mut in
-    let pending_reminders = List.filter (fun r -> not (is_due r)) 
+    let pending_reminders = List.filter (fun r -> not (is_due r))
                                         chan.reminders_mut
     in
     chan.reminders_mut <- pending_reminders;
