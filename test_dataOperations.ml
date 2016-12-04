@@ -54,11 +54,6 @@ let r11 = add_user_org d1 "user2" "org1"
 let r12 = add_user_org d1 "user3" "org1"
 let r13 = add_user_org d1 "user1" "org1" (* should fail *)
 
-(*
-let r14 = add_channel d1 "org1" "channel1" "user2" true
-let r15 = add_channel d1 "org1" "channel2" "user1" false
-*)
-
 let r14 = add_channel d1 "org1" "channel1" true
 let r15 = add_channel d1 "org1" "channel2" false
 
@@ -69,21 +64,19 @@ let r16 = join_channel d1 "channel1" "user3" "org1"
 let r17 = join_channel d1 "channel2" "user3" "org1"
 
 let r18 = add_message d1 "org1" "channel1" "user2" (SimpleMessage "msg1")
-let r19 = add_message d1 "org1" "channel1" "user3" (ReminderMessage ("foo", 100))
-let r20 = add_message d1 "org1" "channel1" "user2" (PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))
+let r19 = add_message d1 "org1" "channel1" "user3"
+          (ReminderMessage ("foo", 100))
+let r20 = add_message d1 "org1" "channel1" "user2"
+          (PollMessage ("0", "poll1", [("opt1",1);("opt2",2);("opt3",3)]))
 let r21 = add_message d1 "org1" "channel2" "user1" (SimpleMessage "msg2")
 let r22 = add_message d1 "org1" "channel2" "user3" (SimpleMessage "msg3")
-let r23 = add_message d1 "org1" "channel2" "user5" (SimpleMessage "foobar") (* should fail *)
+let r23 = add_message d1 "org1" "channel2" "user5"
+          (SimpleMessage "foobar") (* should fail *)
 
 let r24 = add_org d1 "org2" "user4"
 let r25 = add_user_org d1 "user5" "org2"
 let r26 = add_user_org d1 "user3" "org2"
 let r27 = add_user_org d1 "user3110" "org2" (* should fail *)
-(*
-let r28 = add_channel d1 "org2" "channel3" "user5" true
-let r29 = add_channel d1 "org2" "channel4" "user4" true
-let r30 = add_channel d1 "org2" "channel5" "user4" true
-*)
 
 let r28 = add_channel d1 "org2" "channel3" true
 let r29 = add_channel d1 "org2" "channel4" true
@@ -127,13 +120,13 @@ let r47 = remove_channel d3 "org2" "channel6" (* should fail *)
 let r48 = remove_channel d3 "org2" "channel5" (* should fail *)
 let r49 = remove_org d3 "org2"
 let r50 = remove_org d3 "org2" (* should fail *)
-let r51 = vote_poll d3 "org1" "channel1" "poll1" "opt1"
-let r52 = vote_poll d3 "org1" "channel1" "poll1" "opt2"
-let r53 = vote_poll d3 "org1" "channel1" "poll1" "opt3"
-let r54 = vote_poll d3 "org1" "channel1" "poll1" "opt4" (* should fail *)
-let r55 = vote_poll d3 "org1" "channel1" "poll2" "opt1" (* should fail *)
-let r56 = vote_poll d3 "org1" "channel2" "poll1" "opt1" (* should fail *)
-let r57 = vote_poll d3 "org2" "channel1" "poll1" "opt1" (* should fail *)
+let r51 = vote_poll d3 "org1" "channel1" "1" "opt1"
+let r52 = vote_poll d3 "org1" "channel1" "1" "opt2"
+let r53 = vote_poll d3 "org1" "channel1" "1" "opt3"
+let r54 = vote_poll d3 "org1" "channel1" "1" "opt4" (* should fail *)
+let r55 = vote_poll d3 "org1" "channel1" "2" "opt1" (* should fail *)
+let r56 = vote_poll d3 "org1" "channel2" "1" "opt1" (* should fail *)
+let r57 = vote_poll d3 "org2" "channel1" "1" "opt1" (* should fail *)
 
 (* populated2 from backup *)
 let b2 = backup_data d3
@@ -193,25 +186,32 @@ let populate_tests1 = [
   "r35" >:: (fun _ -> assert_equal true r35);
 
   "get_user_list1" >::
-    (fun _ -> assert_equal ["user1";"user2";"user3";"user4";"user5"] (List.sort cmp_str (get_user_list d1)));
+    (fun _ -> assert_equal ["user1";"user2";"user3";"user4";"user5"]
+                           (List.sort cmp_str (get_user_list d1)));
 
   "get_org_list1" >::
-    (fun _ -> assert_equal ["org1";"org2"] (List.sort cmp_str (get_org_list d1)));
+    (fun _ -> assert_equal ["org1";"org2"]
+                           (List.sort cmp_str (get_org_list d1)));
 
   "get_user_data2" >::
-    (fun _ -> assert_equal (Some {username="user1"; password="pass1"}) (get_user_data d1 "user1"));
+    (fun _ -> assert_equal (Some {username="user1"; password="pass1"})
+                           (get_user_data d1 "user1"));
 
   "get_user_data3" >::
-    (fun _ -> assert_equal (Some {username="user2"; password="pass2"}) (get_user_data d1 "user2"));
+    (fun _ -> assert_equal (Some {username="user2"; password="pass2"})
+                           (get_user_data d1 "user2"));
 
   "get_user_data4" >::
-    (fun _ -> assert_equal (Some {username="user3"; password="pass3"}) (get_user_data d1 "user3"));
+    (fun _ -> assert_equal (Some {username="user3"; password="pass3"})
+                           (get_user_data d1 "user3"));
 
   "get_user_data5" >::
-    (fun _ -> assert_equal (Some {username="user4"; password="pass4"}) (get_user_data d1 "user4"));
+    (fun _ -> assert_equal (Some {username="user4"; password="pass4"})
+                           (get_user_data d1 "user4"));
 
   "get_user_data6" >::
-    (fun _ -> assert_equal (Some {username="user5"; password="pass5"}) (get_user_data d1 "user5"));
+    (fun _ -> assert_equal (Some {username="user5"; password="pass5"})
+                           (get_user_data d1 "user5"));
 
   "get_user_data7" >::
     (fun _ -> assert_equal None (get_user_data d1 "user6"));
@@ -241,7 +241,7 @@ let populate_tests1 = [
       {
         user_id="user2";
         timestamp=0;
-        body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))
+        body=(PollMessage ("1", "poll1", [("opt1",1);("opt2",2);("opt3",3)]))
       };
       {
         user_id="user3";
@@ -262,7 +262,7 @@ let populate_tests1 = [
       {
         user_id="user2";
         timestamp=0;
-        body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))
+        body=(PollMessage ("1", "poll1", [("opt1",1);("opt2",2);("opt3",3)]))
       };
       {
         user_id="user3";
@@ -283,7 +283,7 @@ let populate_tests1 = [
       {
         user_id="user2";
         timestamp=0;
-        body=(PollMessage ("poll1", [("opt1",1);("opt2",2);("opt3",3)]))
+        body=(PollMessage ("1", "poll1", [("opt1",1);("opt2",2);("opt3",3)]))
       };
       ])
 
@@ -375,25 +375,32 @@ let populate_tests1 = [
 let backup_tests1 = [
   "backup_data0" >:: (fun _ -> assert_equal true b1);
   "get_user_list1" >::
-    (fun _ -> assert_equal ["user1";"user2";"user3";"user4";"user5"] (List.sort cmp_str (get_user_list d2)));
+    (fun _ -> assert_equal ["user1";"user2";"user3";"user4";"user5"]
+                           (List.sort cmp_str (get_user_list d2)));
 
   "get_org_list1" >::
-    (fun _ -> assert_equal ["org1";"org2"] (List.sort cmp_str (get_org_list d2)));
+    (fun _ -> assert_equal ["org1";"org2"]
+                           (List.sort cmp_str (get_org_list d2)));
 
   "get_user_data2" >::
-    (fun _ -> assert_equal (Some {username="user1"; password="pass1"}) (get_user_data d2 "user1"));
+    (fun _ -> assert_equal (Some {username="user1"; password="pass1"})
+                           (get_user_data d2 "user1"));
 
   "get_user_data3" >::
-    (fun _ -> assert_equal (Some {username="user2"; password="pass2"}) (get_user_data d2 "user2"));
+    (fun _ -> assert_equal (Some {username="user2"; password="pass2"})
+                           (get_user_data d2 "user2"));
 
   "get_user_data4" >::
-    (fun _ -> assert_equal (Some {username="user3"; password="pass3"}) (get_user_data d2 "user3"));
+    (fun _ -> assert_equal (Some {username="user3"; password="pass3"})
+                           (get_user_data d2 "user3"));
 
   "get_user_data5" >::
-    (fun _ -> assert_equal (Some {username="user4"; password="pass4"}) (get_user_data d2 "user4"));
+    (fun _ -> assert_equal (Some {username="user4"; password="pass4"})
+                           (get_user_data d2 "user4"));
 
   "get_user_data6" >::
-    (fun _ -> assert_equal (Some {username="user5"; password="pass5"}) (get_user_data d2 "user5"));
+    (fun _ -> assert_equal (Some {username="user5"; password="pass5"})
+                           (get_user_data d2 "user5"));
 
   "get_user_data7" >::
     (fun _ -> assert_equal None (get_user_data d2 "user6"));
@@ -473,22 +480,27 @@ let populate_tests2 = [
   "r57" >:: (fun _ -> assert_equal false r57);
 
   "get_user_list1" >::
-    (fun _ -> assert_equal ["user1";"user2";"user3";"user5"] (List.sort cmp_str (get_user_list d3)));
+    (fun _ -> assert_equal ["user1";"user2";"user3";"user5"]
+                           (List.sort cmp_str (get_user_list d3)));
 
   "get_org_list1" >::
     (fun _ -> assert_equal ["org1"] (List.sort cmp_str (get_org_list d3)));
 
   "get_user_data2" >::
-    (fun _ -> assert_equal (Some {username="user1"; password="pass3110"}) (get_user_data d3 "user1"));
+    (fun _ -> assert_equal (Some {username="user1"; password="pass3110"})
+                           (get_user_data d3 "user1"));
 
   "get_user_data3" >::
-    (fun _ -> assert_equal (Some {username="user2"; password="pass2"}) (get_user_data d3 "user2"));
+    (fun _ -> assert_equal (Some {username="user2"; password="pass2"})
+                           (get_user_data d3 "user2"));
 
   "get_user_data4" >::
-    (fun _ -> assert_equal (Some {username="user3"; password="pass3000"}) (get_user_data d3 "user3"));
+    (fun _ -> assert_equal (Some {username="user3"; password="pass3000"})
+                           (get_user_data d3 "user3"));
 
   "get_user_data6" >::
-    (fun _ -> assert_equal (Some {username="user5"; password="pass5"}) (get_user_data d3 "user5"));
+    (fun _ -> assert_equal (Some {username="user5"; password="pass5"})
+                           (get_user_data d3 "user5"));
 
   "get_user_data7" >::
     (fun _ -> assert_equal None (get_user_data d3 "user4"));
@@ -512,7 +524,7 @@ let populate_tests2 = [
       {
         user_id="user2";
         timestamp=0;
-        body=(PollMessage ("poll1", [("opt1",2);("opt2",3);("opt3",4)]))
+        body=(PollMessage ("1", "poll1", [("opt1",2);("opt2",3);("opt3",4)]))
       };
       {
         user_id="user3";
@@ -560,22 +572,27 @@ let populate_tests2 = [
 let backup_tests2 = [
   "backup_data1" >:: (fun _ -> assert_equal b2 true);
   "get_user_list1" >::
-    (fun _ -> assert_equal ["user1";"user2";"user3";"user5"] (List.sort cmp_str (get_user_list d4)));
+    (fun _ -> assert_equal ["user1";"user2";"user3";"user5"]
+                           (List.sort cmp_str (get_user_list d4)));
 
   "get_org_list1" >::
     (fun _ -> assert_equal ["org1"] (List.sort cmp_str (get_org_list d3)));
 
   "get_user_data2" >::
-    (fun _ -> assert_equal (Some {username="user1"; password="pass3110"}) (get_user_data d4 "user1"));
+    (fun _ -> assert_equal (Some {username="user1"; password="pass3110"})
+                           (get_user_data d4 "user1"));
 
   "get_user_data3" >::
-    (fun _ -> assert_equal (Some {username="user2"; password="pass2"}) (get_user_data d4 "user2"));
+    (fun _ -> assert_equal (Some {username="user2"; password="pass2"})
+                           (get_user_data d4 "user2"));
 
   "get_user_data4" >::
-    (fun _ -> assert_equal (Some {username="user3"; password="pass3000"}) (get_user_data d4 "user3"));
+    (fun _ -> assert_equal (Some {username="user3"; password="pass3000"})
+                           (get_user_data d4 "user3"));
 
   "get_user_data6" >::
-    (fun _ -> assert_equal (Some {username="user5"; password="pass5"}) (get_user_data d4 "user5"));
+    (fun _ -> assert_equal (Some {username="user5"; password="pass5"})
+                           (get_user_data d4 "user5"));
 
   "get_user_data7" >::
     (fun _ -> assert_equal None (get_user_data d4 "user4"));
