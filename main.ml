@@ -334,8 +334,8 @@ let rec main (st : current_state) : (unit Lwt.t) =
       specified user in the current organization
       While in MESSAGE screen:
       <anything not starting with #> : sends a message containing only text
-      #set_reminder <text> <time> : sets a reminder that sends a message with
-      the specified text
+      #set_reminder <minutes> <text> : sets a reminder that sends a message with
+      the specified text in the specified number of minutes
       after the specified amount of time has elapsed.
       #set_poll [<option1>,<option2>...] <question> : sets a poll with options
       that other users of the channel can vote on.
