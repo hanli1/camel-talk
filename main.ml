@@ -186,7 +186,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         | Some o -> (
           match st.current_channel with
           | None -> failwith "shouldn't happen"
-          | Some c -> (send_message st.current_user c o
+          | Some c -> (send_message st.current_user c o "simple" 
             (`Assoc [("content", `String s)]) !server_addr) >>=
             fun r -> main st
         )
@@ -201,7 +201,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         | Some o -> (
           match st.current_channel with
           | None -> failwith "shouldn't happen"
-          | Some c -> (send_message st.current_user c o
+          | Some c -> (send_message st.current_user c o "reminder" 
             (`Assoc [("content", `String s);
             ("time", `String (string_of_int i))]) !server_addr) >>=
             fun r -> main st
@@ -217,7 +217,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         | Some o -> (
           match st.current_channel with
           | None -> failwith "shouldn't happen"
-          | Some c -> send_message st.current_user c o
+          | Some c -> send_message st.current_user c o "poll"
             (`Assoc [
               ("content", `String s);
               ("options", `List (List.map (fun x -> `Assoc [("option",

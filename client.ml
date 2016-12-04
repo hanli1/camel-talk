@@ -53,14 +53,14 @@ let register_user usern passw server_addr=
   resp_to_def resp
 
 
-let send_message usern chanid orgid jmessage server_addr=
+let send_message usern chanid orgid message_type jmessage server_addr=
   let resp = Client.post
   (Uri.of_string (server_addr ^ "/send_message"))
   ~body: (
     `String (
   	   Yojson.Basic.to_string
   	   (`Assoc [("user_id", `String usern);("channel_id", `String chanid);
-  	   ("organization_id", `String orgid);("message_type", `String "simple");
+  	   ("organization_id", `String orgid);("message_type", `String message_type);
        ("message", jmessage)])
     )
   )

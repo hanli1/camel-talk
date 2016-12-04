@@ -16,10 +16,11 @@ type response = {
 
 
 (**
- * [send_message user_id channel_id org_id message_json server_addr] sends a
- * a message from a user on a channel of an organization
+ * [send_message usern chanid orgid message_type jmessage server_addr] sends
+ * a message of type [message_type] (can be "simple", "reminder", or "poll") 
+ * from a user on a channel of an organization
  *)
-val send_message : string -> string -> string ->
+val send_message : string -> string -> string -> string ->
 	Yojson.Basic.json -> string -> response Lwt.t
 
 (**
