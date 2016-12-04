@@ -49,14 +49,6 @@ let escape_str s =
      s
 
 (**
- * [enable_echo] enables the user to see what they are typing currently
- *)
-let enable_echo _ =
-  let termio = Unix.tcgetattr Unix.stdin in
-      Unix.tcsetattr Unix.stdin Unix.TCSADRAIN {termio with
-      Unix.c_icanon = true; Unix.c_echo = true}
-
-(**
  * [check_special c] checks to see if char [c] is a possible pecial arrow
  * character, and then mutates the stack to get rid of string if needed
  *)
@@ -89,22 +81,23 @@ let rec main (st : current_state) : (unit Lwt.t) =
     let input_stack = List.map escape_str !current_input_stack in
     let s = String.concat "" (List.rev input_stack) in
     let () = (current_input_stack := []) in
-    match text_to_message s st.current_screen with (*doesn't perform repainting*)
+    match text_to_message s st.current_screen with
     | CIllegal ->
     	(st.message <- "Illegal command"); main st
     | CCreate s -> (
       (
       match st.current_screen with
       | Organizations -> (
-          let resp = Client.create_organization st.current_user s !server_addr in
-          (st.message <- resp.message); main st
+          (Client.create_organization st.current_user s !server_addr)
+          >>= (fun r ->
+          (st.message <- r.message); main st)
       )
       | Channels -> (
         match st.current_org with
         | None -> failwith "shouldn't happen"
         | Some o ->
-          let resp = Client.create_channel st.current_user o s !server_addr in
-          (st.message <- resp.message); main st
+          (Client.create_channel st.current_user o s !server_addr) >>=
+          (fun r -> (st.message <- r.message); main st)
       )
       | Messages -> failwith "shouldn't happen"
       )
@@ -112,10 +105,11 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | CDelete s -> (
       match st.current_screen with
       | Organizations ->
-          let resp = Client.delete_organization st.current_user s !server_addr in
-          (st.message <- resp.message);
+          (Client.delete_organization st.current_user s !server_addr)
+          >>= (fun r ->
+          (st.message <- r.message);
           (
-            match resp.status with
+            match r.status with
             | "failure" -> main st
             | "success" ->
               if not (Some s = st.current_org) then main st
@@ -123,14 +117,15 @@ let rec main (st : current_state) : (unit Lwt.t) =
               main st)
             | _ -> failwith "unknown response"
           )
+        )
       | Channels -> (
         match st.current_org with
         | None -> failwith "shouldn't happen"
         | Some o ->
-          let resp = Client.delete_channel st.current_user o s !server_addr in
-          (st.message <- resp.message);
+          (Client.delete_channel st.current_user o s !server_addr) >>= fun r ->
+          (st.message <- r.message);
           (
-            match resp.status with
+            match r.status with
             | "failure" -> main st
             | "success" -> (
               if not (Some s = st.current_channel) then
@@ -148,8 +143,9 @@ let rec main (st : current_state) : (unit Lwt.t) =
     | CSwitch s -> (
       match st.current_screen with
       | Organizations -> (
-          let resp = Client.get_org_info st.current_user s !server_addr in
-          match (fst resp) with
+          (Client.get_org_info st.current_user s !server_addr)
+          >>= fun (stat,r) ->
+          match stat with
           | "failure" -> (
             (st.message <- "Not a valid command"); main st
           )
@@ -165,8 +161,9 @@ let rec main (st : current_state) : (unit Lwt.t) =
         match st.current_org with
         | None -> failwith "shouldn't happen"
         | Some o -> (
-          let resp = Client.get_messages st.current_user s o 0 !server_addr in
-          match (fst resp) with
+          (Client.get_messages st.current_user s o 0 !server_addr)
+          >>= fun (stat, r) ->
+          match stat with
           | "failure" -> (
             (st.message <- "Not a valid switch"); main st
           )
@@ -190,7 +187,8 @@ let rec main (st : current_state) : (unit Lwt.t) =
           match st.current_channel with
           | None -> failwith "shouldn't happen"
           | Some c -> (send_message_simple st.current_user c o
-            (`Assoc [("content", `String s)]) !server_addr; main st)
+            (`Assoc [("content", `String s)]) !server_addr) >>=
+            fun r -> main st
         )
       )
       | _ -> failwith "shouldn't happen"
@@ -205,7 +203,8 @@ let rec main (st : current_state) : (unit Lwt.t) =
           | None -> failwith "shouldn't happen"
           | Some c -> (send_message_reminder st.current_user c o
             (`Assoc [("content", `String s);
-            ("time", `String (string_of_int i))]) !server_addr; main st)
+            ("time", `String (string_of_int i))]) !server_addr) >>=
+            fun r -> main st
         )
       )
       | _ -> failwith "shouldn't happen"
@@ -223,9 +222,8 @@ let rec main (st : current_state) : (unit Lwt.t) =
               ("content", `String s);
               ("options", `List (List.map (fun x -> `Assoc [("option",
               `String x); ("count", `Int 0)]) xs))
-            ]) !server_addr;
-            main st
-        )
+            ]) !server_addr) >>=
+            fun r -> main st
       )
       | _ -> failwith "shouldn't happen"
     )
@@ -242,22 +240,22 @@ let rec main (st : current_state) : (unit Lwt.t) =
         main st
     )
     | CQuit -> ( st.message <- "Goodbye"; ignore (Sys.command "clear");
-      enable_echo ();
       Lwt.return ()
       )
     | CInvite (user_to_join, orgid) -> (
-      let resp = invite user_to_join orgid st.current_user !server_addr in
-      (st.message <- resp.message); main st
+      (invite user_to_join orgid st.current_user !server_addr) >>=
+      fun r -> (st.message <- r.message); main st
     )
     | CLeave (user_to_leave, orgid) -> (
-      let resp = leave user_to_leave orgid st.current_user !server_addr in
-      (st.message <- resp.message); main st
+      (leave user_to_leave orgid st.current_user !server_addr) >>=
+      fun r -> (st.message <- r.message); main st
     )
     | CVote (poll, choice) -> begin
       match (st.current_org, st.current_channel) with
       | (Some orgid, Some chanid)->
-        let resp = vote orgid chanid poll choice !server_addr in
-        (st.message <- resp.message); main st
+        (vote orgid chanid poll choice !server_addr) >>=
+        fun r ->
+        (st.message <- r.message); main st
       | (_, _)-> failwith "shouldn't happen"
       end
     | CScrollUp -> st.current_line <- st.current_line + 10 ; main st
@@ -277,8 +275,9 @@ let rec main (st : current_state) : (unit Lwt.t) =
             else
               s ^ "@" ^ st.current_user
             ) in
-            let resp = Client.create_channel st.current_user o channel_name !server_addr in
-            (st.message <- resp.message); main st
+            (Client.create_channel st.current_user o channel_name !server_addr)
+            >>=
+            (fun r -> (st.message <- r.message); main st)
         )
         | Messages -> failwith "shouldn't happen"
         )
@@ -297,8 +296,9 @@ let rec main (st : current_state) : (unit Lwt.t) =
             else
               s ^ "@" ^ st.current_user
             ) in
-            let resp = Client.get_messages st.current_user channel_name o 0 !server_addr in
-            match (fst resp) with
+            (Client.get_messages st.current_user channel_name o 0 !server_addr)
+            >>= fun (stat, r) ->
+            match stat with
             | "failure" -> (
               (st.message <- "Not a valid switch"); main st
             )
@@ -355,7 +355,8 @@ and login () =
   ANSITerminal.(print_string [Bold; green]
   	"Password: ");
   let password = read_line () in
-  if (login_user username password !server_addr).status = "success" then (
+  let r = Lwt_main.run (login_user username password !server_addr) in
+    if r.status = "success" then (
     ANSITerminal.(print_string [Bold; green]
     "Success!\n");
     flush_all ();
@@ -368,18 +369,18 @@ and login () =
        current_line = 0;
        message = "Hello, "^username^". Type \"#help\" to see commands."
     } in
-    run_app_threads st
+    return (run_app_threads st)
     )
-  else (
+  else
+  (
     ANSITerminal.(print_string [Bold; blue]
   	"\nNot a valid username and password pair\nWant to register? (y/n) Or, type \"exit\" to exit\n");
     ANSITerminal.(print_string [Blink] "> ");
     match read_line () with
-    | "exit" -> exit 0
+    | "exit" -> return (ignore (exit 0))
     | "y" -> register ()
     | _ -> login ()
   )
-
 
 and register () =
   ANSITerminal.(print_string [Bold; blue]
@@ -388,8 +389,8 @@ and register () =
   let username = read_line () in
     ANSITerminal.(print_string [Bold; green] "Password: ");
   let password = read_line () in
-  let clientpass = register_user username password !server_addr in
-  if clientpass.status = "success" then (
+  let r = Lwt_main.run (register_user username password !server_addr) in
+  if r.status = "success" then (
     ANSITerminal.(print_string [Bold; green] "Success!\n");
     flush_all ();
     let st =  {
@@ -401,12 +402,13 @@ and register () =
        current_line = 0;
        message = "Hello, "^username^". Type \"#help\" to see commands."
     } in
-    run_app_threads st
+    return (run_app_threads st)
   )
-  else
+  else (
     ANSITerminal.(print_string [Bold; blue]
       "An error occured. Please register again.");
     register ()
+  )
 
 (**
  * [run_app_threads st] starts up the threads necessary for the application
@@ -445,7 +447,8 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
   | Organizations ->
       if c.logged_out then Lwt.return ()
       else
-        let response_json = snd (get_user_organizations c.current_user !server_addr) in
+        (get_user_organizations c.current_user !server_addr) >>=
+        fun (_,response_json) ->
         (ANSITerminal.(erase Above);
         ANSITerminal.(move_cursor (-100) 0);
         print_persist ();
@@ -460,7 +463,8 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
         match c.current_org with
         | None -> failwith "shouldn't happen"
         | Some o ->
-          let response_json = snd (get_org_info c.current_user o !server_addr) in
+          (get_org_info c.current_user o !server_addr) >>=
+          fun (_,response_json) ->
           (ANSITerminal.(erase Above);
           ANSITerminal.(move_cursor (-100) 0);
           print_persist ();
@@ -479,8 +483,8 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
           match c.current_channel with
           | None -> failwith "shouldn't happen"
           | Some ch ->
-            let response_json =
-            snd (get_messages c.current_user ch o c.current_line !server_addr) in
+            (get_messages c.current_user ch o c.current_line !server_addr) >>=
+            fun (_,response_json) ->
             (ANSITerminal.(erase Above);
             ANSITerminal.(move_cursor (-100) 0);
             render_channel_messages c.message o ch response_json;
@@ -492,14 +496,14 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
       )
   )
 
-let () =
+let _ =
   let in_channel = open_in "server_config.txt" in
   let text = ref "" in
   try
-    while true do
+    return (while true do
       let line = input_line in_channel in
       text := !text ^ line
-    done
+    done)
   with
   | End_of_file -> begin
     close_in in_channel;
