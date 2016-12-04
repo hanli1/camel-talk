@@ -411,9 +411,13 @@ let add_user data uid p =
     let _ = DynArray.index_of (fun u -> u.username_mut = uid) data.users in
     false
   ) with Not_found -> (
-    let new_user = {username_mut=uid; password_mut=p} in
-    DynArray.add data.users new_user;
-    true
+    if (not (String.contains uid ';')) then (
+      let new_user = {username_mut=uid; password_mut=p} in
+      DynArray.add data.users new_user;
+      true
+    ) else (
+      false
+    )
   )
 
 let remove_user data uid =
@@ -462,8 +466,14 @@ let add_message data oname cname uid msg_body =
       let new_msg_body = (
         match msg_body with
         | PollMessage (_, text, opts) ->
-          chan.latest_pollid_mut <- chan.latest_pollid_mut + 1;
-          PollMessage ((string_of_int chan.latest_pollid_mut), text, opts)
+          if (List.exists (fun (o, _) -> (String.contains o ';')
+                                         || (String.contains o '|')) opts)
+          then (
+            raise Not_found
+          ) else (
+            chan.latest_pollid_mut <- chan.latest_pollid_mut + 1;
+            PollMessage ((string_of_int chan.latest_pollid_mut), text, opts)
+          )
         | _ -> msg_body
       )
       in
@@ -503,7 +513,8 @@ let vote_poll data oname cname pname op =
 
     let new_msg_body =
       match msg.body with
-      | PollMessage (id, pmes, opts) -> PollMessage (id, pmes, increment_opt opts op)
+      | PollMessage (id, pmes, opts) ->
+        PollMessage (id, pmes, increment_opt opts op)
       | _ -> raise Not_found
     in
 
@@ -603,10 +614,14 @@ let remove_org data orgname =
 
 let add_reminder data oname cname content time =
   try (
-    let org = get_org data.organizations oname in
-    let chan = get_chan org.channels_mut cname in
-    chan.reminders_mut <- (content, time)::chan.reminders_mut;
-    true
+    if (String.contains content ';' || String.contains content '|') then (
+      raise Not_found
+    ) else (
+      let org = get_org data.organizations oname in
+      let chan = get_chan org.channels_mut cname in
+      chan.reminders_mut <- (content, time)::chan.reminders_mut;
+      true
+    )
   ) with Not_found -> false
 
 
