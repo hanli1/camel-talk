@@ -5,94 +5,93 @@ open Cohttp_lwt_unix
 open Yojson.Safe
 
 (**
- * Response body from the server. Status is true if it passes, false if it
- * doesn't pass. The message may contain an error message, such as
- * “can’t create channel that already exists”
+ * Response body from the server. status is either "success" or "failure".
+ * message may contain an error message, such as "can’t create channel that 
+ * already exists"
  *)
 type response = {
   status: string;
   message: string
 }
 
-(**
- * Send messages take in the user id, channel id, organization id, the message
- * body itself.
- *)
 
 (**
- * Simple message: only text
+ * [send_message user_id channel_id org_id message_json server_addr] sends a
+ * a message from a user on a channel of an organization
  *)
-val send_message_simple : string -> string -> string ->
+val send_message : string -> string -> string ->
 	Yojson.Basic.json -> string -> response Lwt.t
 
 (**
- * Poll message: other members of the channel can vote on a specific option
- *)
-val send_message_poll : string -> string -> string ->
-	Yojson.Basic.json -> string -> response Lwt.t
-
-(**
- * Reminder message: the message is sent to the specified channel only at a
- * specified pre-set time. The time is set up in the json.
- *)
-val send_message_reminder : string -> string -> string ->
-	Yojson.Basic.json -> string -> response Lwt.t
-
-(**
- * Upon startup, prompts the user to either login or register. Takes in
- * a new username and password unique pairing to store in the server and allow
- * future authentications
+ * [register_user usern passw server_addr] registers a user on the server
+ * specified by [server_addr]
  *)
 val register_user : string -> string -> string -> response Lwt.t
 
 (**
- * Takes in existing username and password, checks if it is a correct
- * unique pairing
+ * [login_user usern passw server_addr] logins a user on the server specified
+ * by [server_addr]
  *)
 val login_user : string -> string -> string -> response Lwt.t
 
 (**
- * Takes in the organization name to be created and te user_id, then
- * creates the organization. This should also update/repaint the interface
+ * [create_organization usern orgid server_addr] creates an organization with
+ * name [orgid] and admin [usern]
  *)
 val create_organization : string -> string -> string -> response Lwt.t
 
 (**
- * Similar inputs to create_organization, but instead deletes an existing
- * organization
+ * [delete_organization usern orgid server_addr] deletes the organization with
+ * name [orgid]
  *)
 val delete_organization : string -> string -> string -> response Lwt.t
 
 (**
- * Takes in the user id and an organization name, as well as the name of the
- * channel to be created. Creates the channel inside the organization specified
+ * [create_channel usern orgid chanid server_addr] creates the channel in the
+ * specified organization
  *)
 val create_channel : string -> string -> string -> string -> response Lwt.t
 
 (**
- * Similar to create_channel, except deletes the specified channel name from
- * the specified organization
+ * [delete_channel usern orgid chanid server_addr] deletes the channel in the
+ * specified organization
  *)
 val delete_channel : string -> string -> string -> string -> response Lwt.t
 
 (**
- * Takes in user id and organization name and returns a json object containing
- * information about the organization: the list of team channels, the lsit of private
- * channels, and the list of users in the organization
+ * [get_org_info usern orgid server_addr] returns a response containing
+ * information about the organization: the list of team channels, the list of 
+ * private channels, and the list of users in the organization
  *)
 val get_org_info : string -> string -> string -> (string * Yojson.Basic.json) Lwt.t
 
 (**
- * Takes in user id, organization name, channel name, start index, and
- * returns a json object containing the message, message type, user_id of the
- * responder, and time stamp, among other things
+ * [get_messages usern chanid orgid start_index server_addr] takes in user id, 
+ * organization name, channel name, start index, and returns a response
+ * containing up to 10 messages
  *)
 val get_messages : string -> string -> string -> int -> string -> (string * Yojson.Basic.json) Lwt.t
 
+(**
+ * [get_user_organizations usern server_addr] returns a response containing the
+ * list of organizations a user is a part of
+ *)
 val get_user_organizations : string -> string -> (string * Yojson.Basic.json) Lwt.t
 
+(**
+ * [invite usern orgid requester server_addr] invites a user to an organization
+ * (the user is automatically added the organization)
+ *)
 val invite : string -> string -> string -> string -> response Lwt.t
 
+(**
+ * [leave usern orgid requester server_addr] allows a user to leave an organization
+ * or for an admin to kick out a user from an organization
+ *)
 val leave : string -> string -> string -> string -> response Lwt.t
 
+(**
+ * [vote org chan poll choice server_addr] submits a vote for an option of a poll
+ * of a given channel of a given organization
+ *)
 val vote : string -> string -> string -> string -> string -> response Lwt.t

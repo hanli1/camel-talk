@@ -9,6 +9,10 @@ type response = {
   message: string
 }
 
+(**
+ * [resp_to_def resp] takes in a deferred Cohttp.Response.t [resp] and returns a 
+ * deferred response object with the status and message 
+ *)
 let resp_to_def resp = 
   resp >>= (fun (_,body) -> 
     body |> Cohttp_lwt_body.to_string >|= (
@@ -27,7 +31,7 @@ let resp_to_def resp =
   }))
 
 let login_user usern passw server_addr=
-  let resp = Client.post (Uri.of_string (server_addr ^ "login_user"))
+  let resp = Client.post (Uri.of_string (server_addr ^ "/login_user"))
   ~body: (
     `String (
     	 Yojson.Basic.to_string
@@ -38,7 +42,7 @@ let login_user usern passw server_addr=
   resp_to_def resp
 
 let register_user usern passw server_addr=
-  let resp = Client.post (Uri.of_string (server_addr ^ "register_user"))
+  let resp = Client.post (Uri.of_string (server_addr ^ "/register_user"))
   ~body: (
     `String (
   	   Yojson.Basic.to_string
@@ -49,9 +53,9 @@ let register_user usern passw server_addr=
   resp_to_def resp
 
 
-let send_message_simple usern chanid orgid jmessage server_addr=
+let send_message usern chanid orgid jmessage server_addr=
   let resp = Client.post
-  (Uri.of_string (server_addr^"send_message"))
+  (Uri.of_string (server_addr ^ "/send_message"))
   ~body: (
     `String (
   	   Yojson.Basic.to_string
@@ -63,37 +67,9 @@ let send_message_simple usern chanid orgid jmessage server_addr=
  in
  resp_to_def resp
 
-let send_message_poll usern chanid orgid jmessage server_addr=
-  let resp = Client.post
-  (Uri.of_string (server_addr^"send_message"))
-  ~body: (
-    `String (
-  	   Yojson.Basic.to_string
-  	   (`Assoc [("user_id", `String usern);("channel_id", `String chanid);
-  	   ("organization_id", `String orgid);("message_type", `String "poll");
-  	   ("message", jmessage)])
-    )
-  )
- in
- resp_to_def resp
-
-let send_message_reminder usern chanid orgid jmessage server_addr=
-  let resp = Client.post
-  (Uri.of_string (server_addr^"send_message"))
-  ~body:(
-    `String (
-  	   Yojson.Basic.to_string
-  	   (`Assoc [("user_id", `String usern);("channel_id", `String chanid);
-  	   ("organization_id", `String orgid); ("message_type", `String "reminder");
-       ("message", jmessage)])
-    )
-  )
- in
- resp_to_def resp
-
 let create_organization usern orgid server_addr=
   let resp = Client.post
-  (Uri.of_string (server_addr^"create_organization"))
+  (Uri.of_string (server_addr ^ "/create_organization"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -105,7 +81,7 @@ let create_organization usern orgid server_addr=
 
 let delete_organization usern orgid server_addr=
   let resp = Client.post
-  (Uri.of_string (server_addr^"delete_organization"))
+  (Uri.of_string (server_addr ^ "/delete_organization"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -118,7 +94,7 @@ let delete_organization usern orgid server_addr=
 
 let create_channel usern orgid chanid server_addr=
   let resp = Client.post
-    (Uri.of_string (server_addr^"create_channel"))
+    (Uri.of_string (server_addr ^ "/create_channel"))
   ~body: (
     `String (
       Yojson.Basic.to_string
@@ -132,7 +108,7 @@ let create_channel usern orgid chanid server_addr=
 
 let delete_channel usern orgid chanid server_addr=
   let resp = Client.post
-  (Uri.of_string (server_addr^"delete_channel"))
+  (Uri.of_string (server_addr ^ "/delete_channel"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -146,7 +122,7 @@ let delete_channel usern orgid chanid server_addr=
 
 let invite usern orgid requester server_addr=
   let resp = Client.post
-  (Uri.of_string (server_addr^"invite_user_organization"))
+  (Uri.of_string (server_addr ^ "/invite_user_organization"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -159,7 +135,7 @@ let invite usern orgid requester server_addr=
 
 let leave usern orgid requester server_addr=
   let resp = Client.post
-  (Uri.of_string (server_addr^"remove_user_organization"))
+  (Uri.of_string (server_addr ^ "/remove_user_organization"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -172,7 +148,7 @@ let leave usern orgid requester server_addr=
 
 let vote org chan poll choice server_addr=
   let resp = Client.post
-  (Uri.of_string (server_addr^"vote_poll"))
+  (Uri.of_string (server_addr ^ "/vote_poll"))
   ~body:(
     `String (
       Yojson.Basic.to_string
@@ -191,8 +167,8 @@ let vote org chan poll choice server_addr=
 
 let get_org_info usern orgid server_addr=
   let resp = Client.get (Uri.of_string
-    (server_addr^"get_org_info?"^"user_id="^
-      usern^"&organization_id="^orgid))
+    (server_addr ^ "/get_org_info?" ^ "user_id=" ^
+      usern ^ "&organization_id=" ^ orgid))
   in
   resp >>= (fun (_,body) -> body |> Cohttp_lwt_body.to_string) >|=
     fun s -> 
@@ -204,10 +180,10 @@ let get_org_info usern orgid server_addr=
 
 let get_messages usern chanid orgid start_index server_addr=
   let resp = Client.get (Uri.of_string
-    (server_addr^"get_messages?"^"user_id="^usern
-      ^"&channel_id="^chanid
-      ^"&organization_id="^orgid
-      ^"&start_index="^(string_of_int start_index)))
+    (server_addr ^ "/get_messages?" ^ "user_id=" ^ usern
+      ^ "&channel_id=" ^ chanid
+      ^ "&organization_id=" ^ orgid
+      ^ "&start_index=" ^ (string_of_int start_index)))
   in
   resp >>= (fun (_,body) -> body |> Cohttp_lwt_body.to_string) >|=
     fun s -> 
@@ -219,7 +195,7 @@ let get_messages usern chanid orgid start_index server_addr=
 
 let get_user_organizations usern server_addr=
   let resp = Client.get (Uri.of_string
-    (server_addr^"get_user_organizations?"^"user_id="^usern))
+    (server_addr ^ "/get_user_organizations?" ^ "user_id=" ^ usern))
   in
   resp >>= (fun (_,body) -> body |> Cohttp_lwt_body.to_string) >|=
     fun s -> 

@@ -14,11 +14,11 @@ type current_state = {
   mutable message : string
 }
 
-
+(** represents the current user typed input *)
 let current_input_stack = ref []
-let server_addr = ref ""
 
-(* http://97cdbffd.ngrok.io/ *)
+(** represents the server hostname that the client API will contact*)
+let server_addr = ref ""
 
 (**
  * [escape_char c] escapes the character [c] and provides compatibility
@@ -186,7 +186,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         | Some o -> (
           match st.current_channel with
           | None -> failwith "shouldn't happen"
-          | Some c -> (send_message_simple st.current_user c o
+          | Some c -> (send_message st.current_user c o
             (`Assoc [("content", `String s)]) !server_addr) >>=
             fun r -> main st
         )
@@ -201,7 +201,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         | Some o -> (
           match st.current_channel with
           | None -> failwith "shouldn't happen"
-          | Some c -> (send_message_reminder st.current_user c o
+          | Some c -> (send_message st.current_user c o
             (`Assoc [("content", `String s);
             ("time", `String (string_of_int i))]) !server_addr) >>=
             fun r -> main st
@@ -217,7 +217,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
         | Some o -> (
           match st.current_channel with
           | None -> failwith "shouldn't happen"
-          | Some c -> send_message_poll st.current_user c o
+          | Some c -> send_message st.current_user c o
             (`Assoc [
               ("content", `String s);
               ("options", `List (List.map (fun x -> `Assoc [("option",
@@ -325,7 +325,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
       the specified organization. (only for organization screen)
       #leave <username> <organization name> : kicks out the user from the
       specified organization. (only for organization screen)
-      #logout : logs out, #quit : quits the application
+      #quit : quits the application
       #back : goes out of channel screen into the organization screen
       While in CHANNEL screen:
       #create_direct_message <username> : creates a direct message channel
@@ -341,7 +341,7 @@ let rec main (st : current_state) : (unit Lwt.t) =
       that other users of the channel can vote on.
       #vote <pollname> <optionname> : votes on an option from an existing poll.
       #scrollup, #scrolldown: scrolls the message list up or down respectively.
-      #back, #logout, #quit: same as above."
+      #back and #quit: same as above."
       ); main st
     )
   )
@@ -497,7 +497,7 @@ Y88b  d88P 888  888 888  888  888  88        888 Y88b.  888  888 888 888  88b
   )
 
 let _ =
-  let in_channel = open_in "server_config.txt" in
+  let in_channel = open_in "main_config.txt" in
   let text = ref "" in
   try
     return (while true do
@@ -507,7 +507,9 @@ let _ =
   with
   | End_of_file -> begin
     close_in in_channel;
-    server_addr := !text;
+    (server_addr := !text |> Yojson.Basic.from_string |>
+      Yojson.Basic.Util.member "server_hostname" |> 
+      Yojson.Basic.Util.to_string);
     ANSITerminal.resize 80 34;
   	print_string
   "                         MMMMMMM                     MMMMMMMMMMMMMM

@@ -301,7 +301,6 @@ let backup_data data =
 
     let write_channel (basedir : string) (chan : channel_mutable) : unit =
       let chan_fname = basedir^chan.name_mut^"_channel.txt" in
-      cmd ("touch " ^ chan_fname);
 
       let remstringlist =
         List.map (fun (c,t) -> c^"|"^(string_of_int t)) chan.reminders_mut
@@ -326,8 +325,7 @@ let backup_data data =
 
     let write_org basedir org =
       let org_dirname = basedir ^ org.name_mut ^ "_org/" in
-      cmd ("mkdir " ^ org_dirname);
-      cmd ("touch " ^ org_dirname ^ "org_info.txt");
+      cmd ("mkdir \"" ^ org_dirname ^ "\"");
 
       let org_info_string = (String.concat "\t" [
         org.name_mut;
