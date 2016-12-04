@@ -414,6 +414,12 @@ and register () =
  * [run_app_threads st] starts up the threads necessary for the application
  * loop to function properly (each thread has access to the application
  * state [st])
+ * 
+ * Note: in order to synchronize the draw update/rendering with standard input,
+ * we use a strategy below of setting the standard input to not require
+ * the new line character for reading and also setting the echo to false. We
+ * learned the API for this from http://stackoverflow.com/questions/13410159/how
+ * -to-read-a-character-in-ocaml-without-a-return-key
  *)
 and run_app_threads st =
   let termio = Unix.tcgetattr Unix.stdin in
