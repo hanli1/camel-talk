@@ -638,8 +638,20 @@ let rec data_backup_thread =
       )
     )
 
+let rec data_backup_immediately =
+  fun () ->
+    (
+      if backup_data all_data = false || flush_reminders all_data = false then
+        Lwt.return ()
+      else
+        data_backup_thread ()
+    )
+
 (**
  * Initializes a thread thats runs the code in [server], which starts up the
  * HTTP server
  *)
-let () = ignore (Lwt_main.run (Lwt.pick [server; data_backup_thread ()]))
+let () = 
+  Sys.(set_signal sigint (Signal_handle
+  (fun i -> ignore (data_backup_immediately ()); exit 0)));
+  ignore (Lwt_main.run (Lwt.pick [server; data_backup_thread ()]))
