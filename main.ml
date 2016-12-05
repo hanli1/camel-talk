@@ -369,6 +369,8 @@ and login () =
        current_line = 0;
        message = "Hello, "^username^". Type \"#help\" to see commands."
     } in
+    Sys.(set_signal sigint Signal_ignore);
+    Sys.(set_signal sigquit Signal_ignore);
     return (run_app_threads st)
     )
   else
@@ -402,6 +404,8 @@ and register () =
        current_line = 0;
        message = "Hello, "^username^". Type \"#help\" to see commands."
     } in
+    Sys.(set_signal sigint Signal_ignore);
+    Sys.(set_signal sigquit Signal_ignore);
     return (run_app_threads st)
   )
   else (
