@@ -624,27 +624,28 @@ let server =
   Server.create ~mode:(`TCP (`Port 8000)) (Server.make ~callback:request_router ())
 
 (**
- * [data_backup_thread] backs up all server side data by flushing it to the
- * file system every 2 minutes. It also flushes any reminders.
+ * [background_tasks_thread] is a thread for background tasks; currently, only
+ * background task is to flush reminders
  *)
-let rec data_backup_thread =
+let rec background_tasks_thread =
   fun () ->
     (
       Lwt_unix.sleep 60.0 >>= (fun () ->
-      if backup_data all_data = false || flush_reminders all_data = false then
+      if flush_reminders all_data = false then
         Lwt.return ()
       else
-        data_backup_thread ()
+        background_tasks_thread ()
       )
     )
 
-let rec data_backup_immediately =
+(**
+ * [backup_all_data] backs up all in memory data to disk upon server shutdown
+ *)
+
+let rec backup_all_data =
   fun () ->
     (
-      if backup_data all_data = false || flush_reminders all_data = false then
-        Lwt.return ()
-      else
-        data_backup_thread ()
+      backup_data all_data
     )
 
 (**
@@ -653,5 +654,5 @@ let rec data_backup_immediately =
  *)
 let () = 
   Sys.(set_signal sigint (Signal_handle
-  (fun i -> ignore (data_backup_immediately ()); exit 0)));
-  ignore (Lwt_main.run (Lwt.pick [server; data_backup_thread ()]))
+  (fun i -> ignore (backup_all_data ()); exit 0)));
+  ignore (Lwt_main.run (Lwt.pick [server; background_tasks_thread ()]))
